@@ -14,7 +14,7 @@ class Tx39DebugRegressionTests(unittest.TestCase):
             b"DEBUG_BREAK DEBUG=40000002 DEPC=A0001800\n"
             b"DEBUG_DELAY DEBUG=C0000002 DEPC=A0001840\n"
             b"DEBUG_DERET SEEN=C0000002 DEBUG=80000002 "
-            b"DEPC=000018C0 SR=00000003\n"
+            b"DEPC=000018C0 SR=00000003 DELAY=00000055\n"
             b"DEBUG_STEP DEBUG=40000101 DEPC=A0001908 R18=00000000\n"
             b"DEBUG_SUPPRESS SEEN=40000101 DEBUG=40000101 "
             b"DEPC=00001950 DELAY=00000001\n"
@@ -27,7 +27,7 @@ class Tx39DebugRegressionTests(unittest.TestCase):
             b"DEBUG_BSF_STORE DEBUG=40000400 R3=00000002 "
             b"CAUSE=00000000 EPC=00000000\n"
             b"NMI_CACHE SR=00100000 R3=00000003\n"
-            b"NMI_CLEAR SR=00000000 R3=00000004\n"
+            b"NMI_CLEAR SR=00200000 R3=00000004\n"
             b"CACHE_PRIVILEGE DENIED_CAUSE=0000002C "
             b"DENIED_EPC=00001DC0 DENIED_SR=00000008\n"
             b"CACHE_PRIVILEGE ALLOWED_R3=00000005 "
@@ -58,6 +58,7 @@ class Tx39DebugRegressionTests(unittest.TestCase):
             "0x40108000",
             "0x40918000",
             "0x40918800",
+            "0x24130055",
             "0x40816000",
             "0x42000001",
             "0x42000002",

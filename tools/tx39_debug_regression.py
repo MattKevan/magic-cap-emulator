@@ -23,7 +23,8 @@ RESULT_PATTERN = re.compile(
     rb"DEBUG_BREAK DEBUG=([0-9A-F]{8}) DEPC=([0-9A-F]{8}).*"
     rb"DEBUG_DELAY DEBUG=([0-9A-F]{8}) DEPC=([0-9A-F]{8}).*"
     rb"DEBUG_DERET SEEN=([0-9A-F]{8}) DEBUG=([0-9A-F]{8}) "
-    rb"DEPC=([0-9A-F]{8}) SR=([0-9A-F]{8}).*"
+    rb"DEPC=([0-9A-F]{8}) SR=([0-9A-F]{8}) "
+    rb"DELAY=([0-9A-F]{8}).*"
     rb"DEBUG_STEP DEBUG=([0-9A-F]{8}) DEPC=([0-9A-F]{8}) "
     rb"R18=([0-9A-F]{8}).*"
     rb"DEBUG_SUPPRESS SEEN=([0-9A-F]{8}) DEBUG=([0-9A-F]{8}) "
@@ -59,6 +60,7 @@ EXPECTED = (
     0x8000_0002,
     0x0000_18C0,
     0x0000_0003,
+    0x0000_0055,
     0x4000_0101,
     0xA000_1908,
     0x0000_0000,
@@ -85,7 +87,7 @@ EXPECTED = (
     0x0000_0000,
     0x0010_0000,
     0x0000_0003,
-    0x0000_0000,
+    0x0020_0000,
     0x0000_0004,
     0x0000_002C,
     0x0000_1DC0,
@@ -182,10 +184,12 @@ local function run_deret()
     program:write_u32(0x00001880, 0x40108000) -- mfc0 s0,Debug
     program:write_u32(0x00001884, 0x40918800) -- mtc0 s1,DEPC
     program:write_u32(0x00001888, 0x4200001f) -- deret
+    program:write_u32(0x0000188c, 0x24130055) -- delay: addiu s3,zero,0x55
     program:write_u32(0x000018c0, 0x1000ffff) -- b .
     program:write_u32(0x000018c4, 0x00000000)
     cpu.state["R16"].value = 0
     cpu.state["R17"].value = 0x000018c0
+    cpu.state["R19"].value = 0
     cpu.state["SR"].value = 0
     cpu.state["PC"].value = 0xa0001880
 end
@@ -206,6 +210,7 @@ local function run_deret_to_branch()
     program:write_u32(0x00001984, 0xac101a00) -- sw s0,0x1a00(zero)
     program:write_u32(0x00001988, 0x40918800) -- mtc0 s1,DEPC
     program:write_u32(0x0000198c, 0x4200001f) -- deret
+    program:write_u32(0x00001990, 0x00000000) -- nop (DERET delay)
     program:write_u32(0x00001940, 0x10000003) -- b 0x1950
     program:write_u32(0x00001944, 0xac141a04) -- delay: sw s4,0x1a04(zero)
     program:write_u32(0x00001948, 0xac151a04) -- fallthrough (not executed)
@@ -388,9 +393,10 @@ emu.register_frame_done(function()
         run_deret()
     elseif frames == 13 then
         print(string.format(
-            "DEBUG_DERET SEEN=%08X DEBUG=%08X DEPC=%08X SR=%08X",
+            "DEBUG_DERET SEEN=%08X DEBUG=%08X DEPC=%08X SR=%08X DELAY=%08X",
             cpu.state["R16"].value, cpu.state["Debug"].value,
-            cpu.state["DEPC"].value, cpu.state["SR"].value))
+            cpu.state["DEPC"].value, cpu.state["SR"].value,
+            cpu.state["R19"].value))
         run_single_step()
     elseif frames == 14 then
         print(string.format(
@@ -582,7 +588,8 @@ def run_regression(args: argparse.Namespace) -> int:
 
     print(
         "PASS: TX39 SDBBP records breakpoint and delay-slot state, DERET "
-        "returns through DEPC, single-step honors its return/branch-delay "
+        "executes its delay slot and returns through DEPC, single-step honors "
+        "its return/branch-delay "
         "suppression contract, and coincident NMI/interrupt state reaches "
         "NIS/OES with the ordinary exception registers intact; debug-mode "
         "load/store bus errors set BsF without taking an ordinary exception, "

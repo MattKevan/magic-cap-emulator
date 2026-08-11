@@ -237,9 +237,10 @@ inside the interpreter. The disassembler applies the same device distinction.
 The R3900 self-debug unit now exposes CP0 register 16 `Debug` and register 17
 `DEPC`. `SDBBP` enters debug mode at fixed vector `0xbfc00200` without
 modifying ordinary Status, Cause or EPC state; a breakpoint in a branch delay
-slot records the branch address and DBD. `DERET` jumps through writable DEPC,
-clears DM, sets current KU/IE, and disables the next single-step event. If its
-return instruction branches, suppression extends through the delay slot.
+slot records the branch address and DBD. `DERET` executes its required delay
+slot, jumps through writable DEPC, clears DM, sets current KU/IE, and disables
+the next single-step event. If its return instruction branches, suppression
+extends through the delay slot.
 Debug mode also forces cache auto-lock off. The disassembler recognizes both
 instructions and names all four R3900-specific CP0 registers.
 
@@ -250,7 +251,8 @@ fixed uncached `0xbfc00000` vector without shifting the ordinary mode stacks.
 until `DERET`. Status bit 20 is cache parity-error state on baseline MIPS-I
 cores but the NMI latch on R3900; cache lookup therefore leaves it intact.
 The regression executes from cached kseg0 with `NmI` set, then separately
-proves that `MTC0 Status` with bit 20 set clears it.
+proves that `MTC0 Status` with bit 20 set clears it while the read-only TLB
+shutdown bit remains one.
 
 The focused debug model covers DBP/DSS, DBD, DM, SSt, BsF storage, DEPC,
 the documented return suppression, and the asynchronous coincidences the
@@ -371,8 +373,9 @@ instruction without a Reserved Instruction exception. Artifacts stay under
 `$MAGIC_CAP_ASSETS/runtime/tx39-branch-regression/`.
 
 The self-debug companion executes `SDBBP` both normally and in a branch delay
-slot, reads Debug through real `MFC0`, rewrites DEPC with `MTC0`, and returns
-with `DERET`. It then enables SSt and proves the pending instruction has not
-executed when DSS arrives. A final DERET returns to a branch and requires the
-branch plus delay slot to execute before DSS stops at the target. Artifacts
-stay under `$MAGIC_CAP_ASSETS/runtime/tx39-debug-regression/`.
+slot, reads Debug through real `MFC0`, rewrites DEPC with `MTC0`, executes a
+non-NOP DERET delay slot, and returns through DEPC. It then enables SSt and
+proves the pending instruction has not executed when DSS arrives. A final
+DERET returns to a branch and requires both DERET's delay slot and the returned
+branch's delay slot to execute before DSS stops at the target. Artifacts stay
+under `$MAGIC_CAP_ASSETS/runtime/tx39-debug-regression/`.
