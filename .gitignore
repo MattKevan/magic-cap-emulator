@@ -16,3 +16,5 @@ scratch/
 # MAME's default screenshot output when no asset-tree directory is supplied.
 /snap/
 .superpowers/
+build/
+*.app/
