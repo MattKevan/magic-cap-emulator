@@ -8,6 +8,10 @@
   <string>com.ddanila.datarover</string>
   <key>CFBundleName</key>
   <string>DataRover</string>
+  <key>CFBundleDisplayName</key>
+  <string>DataRover</string>
+  <key>CFBundleIconFile</key>
+  <string>DataRover</string>
   <key>CFBundleVersion</key>
   <string>1.0</string>
   <key>CFBundlePackageType</key>

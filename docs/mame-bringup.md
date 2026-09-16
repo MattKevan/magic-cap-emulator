@@ -136,6 +136,11 @@ PATH="/usr/lib/ccache:$PATH" \
 This produces `../mame/datarover`. The scoped build is the normal
 edit-build-run loop; a full MAME build is unnecessary.
 
+The fork's `custom` branch carries the DataRover native-shell patch (window
+title, menubar, pointer confinement, and warning dialogs). Rebuild with
+`SUBTARGET=datarover` as above to pick up UI changes — the option names the
+subtarget that compiles the patched shell in.
+
 ## Run Magic Cap
 
 For interactive play, `tools/start_manual.sh` wraps everything below (views,
