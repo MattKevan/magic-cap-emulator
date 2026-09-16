@@ -39,4 +39,4 @@ exec "$BIN" datarover840 \
   -nokeepaspect \
   -view LCD \
   -lightgun -lightgun_device lightgun \
-  "${extra[@]:-}"
+  ${extra[@]+"${extra[@]}"}
