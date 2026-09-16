@@ -14,3 +14,12 @@ cp "$BIN" "$CONTENTS/MacOS/datarover-bin"
 cp "$REPO_ROOT/packaging/macos/launcher.sh" "$CONTENTS/MacOS/DataRover"
 chmod +x "$CONTENTS/MacOS/DataRover"
 printf 'staged %s\n' "$APP"
+FW="$CONTENTS/Frameworks"
+for lib in $(otool -L "$BIN" | awk '{print $1}' | grep -E 'libSDL'); do
+  src="$lib"
+  [[ -f "$src" ]] || src="$(brew --prefix sdl2)/lib/$(basename "$lib")"
+  cp -n "$src" "$FW/" 2>/dev/null || cp "$src" "$FW/"
+  install_name_tool -change "$lib" "@executable_path/../Frameworks/$(basename "$lib")" "$CONTENTS/MacOS/datarover-bin"
+done
+codesign --force --deep -s - "$APP"
+codesign -vv "$APP"
