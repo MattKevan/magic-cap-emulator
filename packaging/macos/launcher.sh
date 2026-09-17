@@ -13,6 +13,11 @@ sha256_of() {
 }
 
 mkdir -p "$ROMDIR" "$APP_SUPPORT/nvram" "$APP_SUPPORT/cfg"
+APP_LOGS="$APP_SUPPORT/logs"
+APP_RUN="$APP_SUPPORT/run"
+LOG="$APP_LOGS/last-boot.log"
+PTY_FILE="$APP_RUN/pclink-pty"
+mkdir -p "$APP_LOGS" "$APP_RUN"
 
 if [[ ! -f "$ROM" ]] || [[ "$(sha256_of "$ROM")" != "$WANT_SHA" ]]; then
   pick="$(osascript -e 'POSIX path of (choose file with prompt "Select your MagicCap-USA.image ROM")')"
@@ -30,6 +35,45 @@ if [[ "${1:-}" == "--" ]]; then shift; fi
 extra=("$@")
 
 export SDL_VIDEO_HIGHDPI_DISABLED=1
+
+# PCLink PTY contract (see tools/pclink_send.py and the File → Install
+# Package… menu handler): the menu needs the path MAME announces on stdout
+# as ":rs2321:pty PTY: <path>" (same PTY_PATTERN as
+# tools/pclink_regression.py:36), plus the repo root holding
+# tools/pclink_send.py.  The repo root is known here; the PTY path is not
+# (the device only exists after the emulator starts), and exec preserves
+# the environment but freezes it — a pre-exec export cannot carry a
+# post-exec value.  So:
+#   * export MAGIC_CAP_EMULATOR_ROOT now (best effort; the menu falls back
+#     to the fork-adjacent checkout layout when it is absent);
+#   * clear any inherited DATAROVER_PCLINK_PTY (a stale slave path from an
+#     older boot must never win) and remove last boot's run file;
+#   * tee emulator output to $APP_SUPPORT/logs/last-boot.log while a
+#     disowned background scraper publishes the announced path to
+#     $APP_SUPPORT/run/pclink-pty.  The subshell is a separate process, so
+#     it survives the exec below; the menu reads the env var first, then
+#     the run file.
+REPO_ROOT=""
+for CANDIDATE in "$HERE/../.." "$HERE/../../../.." "$HERE/../../../../../magic-cap-emulator"; do
+  if [[ -f "$CANDIDATE/tools/pclink_send.py" ]]; then
+    REPO_ROOT="$(cd "$CANDIDATE" && pwd)"
+    break
+  fi
+done
+if [[ -n "$REPO_ROOT" ]]; then export MAGIC_CAP_EMULATOR_ROOT="$REPO_ROOT"; fi
+unset DATAROVER_PCLINK_PTY || true
+rm -f "$PTY_FILE"
+(
+  tries=0
+  while [[ $tries -lt 480 ]]; do
+    if grep -a -q ':rs2321:pty PTY:' "$LOG" 2>/dev/null; then
+      pty="$(grep -a -o ':rs2321:pty PTY: *[^[:space:]]*' "$LOG" 2>/dev/null | head -n 1 | sed 's/.*PTY: *//')"
+      if [[ -n "${pty:-}" ]]; then printf '%s\n' "$pty" > "$PTY_FILE"; break; fi
+    fi
+    sleep 0.25
+    tries=$((tries + 1))
+  done
+) &
 exec "$BIN" datarover840 \
   -rompath "$APP_SUPPORT/roms" \
   -cfg_directory "$APP_SUPPORT/cfg" \
@@ -39,4 +83,5 @@ exec "$BIN" datarover840 \
   -nokeepaspect \
   -view LCD \
   -lightgun -lightgun_device lightgun \
-  ${extra[@]+"${extra[@]}"}
+  -rs2321 pty \
+  ${extra[@]+"${extra[@]}"} > >(tee "$LOG") 2>&1
