@@ -63,18 +63,17 @@ done
 if [[ -n "$REPO_ROOT" ]]; then export MAGIC_CAP_EMULATOR_ROOT="$REPO_ROOT"; fi
 unset DATAROVER_PCLINK_PTY || true
 rm -f "$PTY_FILE"
-(
+nohup bash -c '
   tries=0
   while [[ $tries -lt 480 ]]; do
-    if grep -a -q ':rs2321:pty PTY:' "$LOG" 2>/dev/null; then
-      pty="$(grep -a -o ':rs2321:pty PTY: *[^[:space:]]*' "$LOG" 2>/dev/null | head -n 1 | sed 's/.*PTY: *//')"
-      if [[ -n "${pty:-}" ]]; then printf '%s\n' "$pty" > "$PTY_FILE"; break; fi
+    if grep -a -q ":rs2321:pty PTY:" "$0" 2>/dev/null; then
+      pty="$(grep -a -o ":rs2321:pty PTY: *[^[:space:]]*" "$0" 2>/dev/null | head -n 1 | sed "s/.*PTY: *//")"
+      if [[ -n "${pty:-}" ]]; then printf "%s\n" "$pty" > "$1"; break; fi
     fi
     sleep 0.25
     tries=$((tries + 1))
   done
-) &
-disown || true
+' "$LOG" "$PTY_FILE" >/dev/null 2>&1 < /dev/null &
 exec "$BIN" datarover840 \
   -rompath "$APP_SUPPORT/roms" \
   -cfg_directory "$APP_SUPPORT/cfg" \
