@@ -74,6 +74,7 @@ rm -f "$PTY_FILE"
     tries=$((tries + 1))
   done
 ) &
+disown || true
 exec "$BIN" datarover840 \
   -rompath "$APP_SUPPORT/roms" \
   -cfg_directory "$APP_SUPPORT/cfg" \
