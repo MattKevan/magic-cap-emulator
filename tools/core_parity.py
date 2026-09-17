@@ -7,11 +7,12 @@ Both paths boot the same datarover binary with identical ROM/NVRAM/cfg
 
 - reference: MAME Lua autoboot script reads guest DRAM at the Dino
   video-high-buffer base register (0x10c00030 masked to 0xfffffff0,
-  fallback 0x003f6a00) via program:read_u32 and writes BE words to disk.
+  fallback 0x003f6a00) via program:read_u32 and packs the words
+  little-endian to match the raw guest byte order.
 - shim: the in-process parity dumper compiled into the binary
   (src/libdatarover/datarover_shim.cpp, armed via DATAROVER_CORE_DUMP /
-  DATAROVER_CORE_FRAMES) reads the same guest words through the same
-  scanout math the driver's screen_update uses.
+  DATAROVER_CORE_FRAMES) reads the same guest words THROUGH THE CORE ABI
+  (datarover_framebuffer_bytes/size) and writes the raw core-owned bytes.
 
 The buffers are compared byte-for-byte: PARITY OK or the first differing
 offset, exit nonzero. Framebuffer-only scope: Task 2's known gaps (Cntd
@@ -52,7 +53,7 @@ emu.register_frame_done(function()
         if base > (0x00400000 - {FB_SIZE}) then base = 0x003f6a00 end
         local f = io.open({str(dump_path)!r}, "wb")
         for offset = 0, {FB_SIZE - 4}, 4 do
-            f:write(string.pack(">I4", program:read_u32(base + offset)))
+            f:write(string.pack("<I4", program:read_u32(base + offset)))
         end
         f:close()
         print(string.format("PARITY_REF_OK base=%08X", base))
@@ -212,11 +213,10 @@ def main(argv: list[str]) -> int:
     if args.keepdir is not None:
         root = args.keepdir.expanduser().resolve()
         root.mkdir(parents=True, exist_ok=True)
-        run_sides(root)
+        return run_sides(root)
     else:
         with tempfile.TemporaryDirectory(prefix="core-parity-") as tmp:
             return run_sides(Path(tmp))
-    return 0
 
 
 def run_sides(root: Path) -> int:
