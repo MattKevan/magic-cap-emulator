@@ -156,11 +156,15 @@ struct EmulatorView: UIViewRepresentable {
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
         func draw(in view: MTKView) {
+            // Snapshot coordinator state at entry: detach() nils these on
+            // teardown while the display link may still fire once, and
+            // KERN_INVALID_ADDRESS at 0x40 is an ivar read off a freed
+            // Coordinator (texture/pipeline/sampler/queue ivars).
             guard let sessionHandle = session.handle,
-                  let texture,
-                  let pipeline,
-                  let sampler,
-                  let queue else { return }
+                  let texture = texture,
+                  let pipeline = pipeline,
+                  let sampler = sampler,
+                  let queue = queue else { return }
             // The core clears its live-machine pointer on exit while the
             // handle stays non-nil until destroy: re-resolve liveness via
             // a zero-size probe is impossible, so gate on session.alive.
