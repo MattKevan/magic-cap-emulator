@@ -71,7 +71,7 @@ def main():
             return ""
         ei = [i for i in incs.get(lib, []) if i not in global_incs]
         ed = [d for d in defs.get(lib, []) if d.strip('"') not in global_defs]
-        flags = [f'-I"$(MAME_DIR)/{i}"' for i in ei] + ed
+        flags = [f'-I"$(SRCROOT)/../../../mame/{i}"' for i in ei] + ed
         if lib in ("ocore_sdl3", "osd_sdl3"):
             drop = re.compile(r"-D(OSD_SDL|SDLMAME_SDL3|SDLMAME_MACOSX|MACOSX_USE_LIBSDL|"
                               r"SDLMAME_UNIX|SDLMAME_DARWIN|USE_NETWORK|OSD_NET_USE_PCAP|"
@@ -80,6 +80,23 @@ def main():
             flags = [f for f in flags if not drop.match(f.strip('"'))]
         if lib == "asmjit":
             flags = ["-include $(SRCROOT)/Core/datarover_asmjit_ios.h"] + flags
+        if lib == "flac":
+            # <config.h> would resolve to src/emu/config.h (global -Isrc/emu
+            # always precedes per-file -I). Prefix-include FLAC's config by
+            # relative path, then undef HAVE_CONFIG_H so the TU skips its own.
+            flags = ["-I$(SRCROOT)/../../../mame/3rdparty/flac/src/libFLAC/include",
+                     "-I$(SRCROOT)/../../../mame/3rdparty/flac/include",
+                     "-include $(SRCROOT)/Core/flac_config_prefix.h"] + flags
+        if lib == "lua":
+            flags = ["-DLUA_USE_IOS"] + flags
+        if lib == "softfloat3":
+            # GENie: buildoptions_cpp { "-x c++" } — bochs_ext .c files use
+            # C++ functional casts; compile the whole lib as C++.
+            flags = ["-x", "c++"] + flags
+        if lib in ("utf8proc", "zlib") and "-Dverbose=-1" in flags:
+            # -Dverbose poisons the SDK: malloc.h names a parameter `verbose`.
+            # utf8proc.c/zlib TUs don't reference `verbose`, so drop it.
+            flags = [f for f in flags if f != "-Dverbose=-1"]
         if s.endswith(".mm"):
             # bgfx ObjC files use manual retain/release (GENie: no ARC)
             flags = ["-fno-objc-arc"] + flags
@@ -110,6 +127,25 @@ def main():
         return 1
     mm = matches[idx]
     text = text[:mm.start(1)] + mm.group(1) + "".join(phase_lines) + text[mm.end(1):]
+
+    # Materialize flac_config_prefix.h with the absolute MAME dir (the
+    # #include must be absolute: -Isrc/emu shadows any relative <config.h>).
+    import subprocess
+    try:
+        mamedir = subprocess.run(["xcodebuild", "-project", args.project,
+                                  "-scheme", "DataRoverCore", "-configuration", "Release",
+                                  "-showBuildSettings"],
+                                 capture_output=True, text=True, cwd=os.path.join(HERE, "..")).stdout
+        import re as _re
+        m = _re.search(r"MAME_DIR = (\S+)", mamedir)
+        _md = m.group(1) if m else "$(SRCROOT)/../../../mame"
+    except Exception:
+        _md = "$(SRCROOT)/../../../mame"
+    _pf = os.path.normpath(os.path.join(HERE, "..", "Core", "flac_config_prefix.h"))
+    _pt = open(_pf).read()
+    if "@MAME_DIR@" in _pt:
+        open(_pf, "w").write(_pt.replace("@MAME_DIR@", "/Users/mattkevan/Dev/mame"))
+        print("materialized flac_config_prefix.h MAME dir")
     with open(pbxproj, "w") as f:
         f.write(text)
     print(f"injected {len(missing)} sources into {pbxproj}")

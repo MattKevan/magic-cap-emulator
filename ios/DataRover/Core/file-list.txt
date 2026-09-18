@@ -285,7 +285,7 @@
 3rdparty/portmidi/pm_common/portmidi.c
 3rdparty/portmidi/pm_mac/pmmac.c
 3rdparty/portmidi/pm_mac/pmmacosxcm.c
-3rdparty/portmidi/porttime/ptmacosx_mach.c
+3rdparty/portmidi/porttime/ptmacosx_cf.c
 3rdparty/softfloat3/bochs_ext/extF80_scale.c
 3rdparty/softfloat3/bochs_ext/f2xm1.c
 3rdparty/softfloat3/bochs_ext/fpatan.c
