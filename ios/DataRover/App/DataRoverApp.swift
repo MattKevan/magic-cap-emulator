@@ -142,11 +142,27 @@ struct EmulatorContainerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ZStack {
-                EmulatorView(session: session)
-                TouchPenView(session: session)
+            if let error = session.bootError {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 44))
+                        .foregroundStyle(.secondary)
+                    Text("Boot failed")
+                        .font(.headline)
+                    Text(error)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                .background(.black)
+            } else {
+                ZStack {
+                    EmulatorView(session: session)
+                    TouchPenView(session: session)
+                }
+                .background(.black)
             }
-            .background(.black)
             // Power/Option need a fork button ABI (see ToolbarView):
             // pass nil so the buttons render disabled, not fake-live.
             ToolbarView(pressPower: nil, pressOption: nil)

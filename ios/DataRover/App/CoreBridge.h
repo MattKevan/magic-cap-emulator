@@ -9,8 +9,8 @@
 // Nullability mirrors the header contract: the framebuffer pointer may be
 // NULL (pre-boot / non-RAM-backed mapping — null-check before blit) and
 // create returns NULL on boot failure.
-#pragma once
-
+// NOTE: no #pragma once — this file is the bridging header (a main file),
+// and clang warns "#pragma once in main file".
 #import <Foundation/Foundation.h>
 
 NS_ASSUME_NONNULL_BEGIN

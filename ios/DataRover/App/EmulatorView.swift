@@ -26,9 +26,16 @@ final class EmulatorSession: ObservableObject {
     private(set) var handle: UnsafeMutableRawPointer?
     /// False once teardown begins; gates the blit path off the worker.
     private(set) var alive = true
+    /// Non-nil when datarover_create returned NULL (missing ROM/NVRAM);
+    /// the container renders this instead of a black framebuffer view.
+    private(set) var bootError: String?
 
     init(nvramDir: String, cfgDir: String, romPath: String) {
         handle = coreCreate(nvram: nvramDir, cfg: cfgDir, rom: romPath)
+        if handle == nil {
+            alive = false
+            bootError = "Boot failed: ROM not found at \(romPath). Re-import the MagicCap-USA image."
+        }
     }
 
     func invalidate() { alive = false }
