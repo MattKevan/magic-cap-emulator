@@ -86,7 +86,7 @@
 		B3C8A810BEA426449DEDDC99 = {isa = PBXBuildFile; fileRef = 97809C589CA488F732DB19A0 /* $(MAME_DIR)/3rdparty/bgfx/src/bgfx.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		F95B1DEE479A6FBA42446F7C = {isa = PBXBuildFile; fileRef = 2F5D2B87492BC977E89A877A /* $(MAME_DIR)/3rdparty/bgfx/src/debug_renderdoc.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		7922B0E350A91F17DCE5DC8C = {isa = PBXBuildFile; fileRef = 5F8644D673C94DA9EC729DBB /* $(MAME_DIR)/3rdparty/bgfx/src/dxgi.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
-		34E2F6823BBE43C4D8B741CE = {isa = PBXBuildFile; fileRef = 104B2D4AF915F1E6822CE6B5 /* $(MAME_DIR)/3rdparty/bgfx/src/glcontext_eagl.mm */; settings = {COMPILER_FLAGS = "-fno-objc-arc -I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
+		34E2F6823BBE43C4D8B741CE = {isa = PBXBuildFile; fileRef = 104B2D4AF915F1E6822CE6B5 /* $(MAME_DIR)/3rdparty/bgfx/src/glcontext_eagl.mm */; settings = {COMPILER_FLAGS = "-fno-objc-arc -fno-objc-arc -I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		1AB5EA871AB7A42979A808F0 = {isa = PBXBuildFile; fileRef = D2F8C3C30022AE461339079E /* $(MAME_DIR)/3rdparty/bgfx/src/glcontext_egl.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		FC476CC1A01EC9CC60A8261F = {isa = PBXBuildFile; fileRef = 01FD729FECAC0D8709D6C83D /* $(MAME_DIR)/3rdparty/bgfx/src/glcontext_html5.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		6F51B5AD4E5794D40B206DF1 = {isa = PBXBuildFile; fileRef = F92C0C6E304978A3995B726B /* $(MAME_DIR)/3rdparty/bgfx/src/glcontext_wgl.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
@@ -96,7 +96,7 @@
 		97FFDA1468007F65CC44682E = {isa = PBXBuildFile; fileRef = DC99B884F94136CB7494FF1D /* $(MAME_DIR)/3rdparty/bgfx/src/renderer_d3d12.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		675FCC179596B14140EDE5B2 = {isa = PBXBuildFile; fileRef = E7CB2DA50F9CE835B235B2B1 /* $(MAME_DIR)/3rdparty/bgfx/src/renderer_d3d9.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		74E909B1DAF53E968C48AC48 = {isa = PBXBuildFile; fileRef = A88909CDBE0329C2B2050B9C /* $(MAME_DIR)/3rdparty/bgfx/src/renderer_gnm.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
-		1A21BF379D5FAE7CD83B7FF9 = {isa = PBXBuildFile; fileRef = 80937E22F689E94AEA74DE98 /* $(MAME_DIR)/3rdparty/bgfx/src/renderer_mtl.mm */; settings = {COMPILER_FLAGS = "-fno-objc-arc -I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
+		1A21BF379D5FAE7CD83B7FF9 = {isa = PBXBuildFile; fileRef = 80937E22F689E94AEA74DE98 /* $(MAME_DIR)/3rdparty/bgfx/src/renderer_mtl.mm */; settings = {COMPILER_FLAGS = "-fno-objc-arc -fno-objc-arc -I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		65E0A767E5F1567D49864E11 = {isa = PBXBuildFile; fileRef = 9225B354C245A7356D4E4693 /* $(MAME_DIR)/3rdparty/bgfx/src/renderer_noop.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		D9B0A2D90116BD2E1D4B6D1D = {isa = PBXBuildFile; fileRef = E03033A46DA6BC5C84E336AA /* $(MAME_DIR)/3rdparty/bgfx/src/renderer_nvn.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
 		6322FC812BB6BE93D2A77EDE = {isa = PBXBuildFile; fileRef = 70927921C2640C4FEE5CCF86 /* $(MAME_DIR)/3rdparty/bgfx/src/renderer_vk.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/3rdparty/directx-headers/include/directx\" -DASMJIT_STATIC -DBGFX_CONFIG_MAX_FRAME_BUFFERS=128 -DBX_CONFIG_DEBUG=0 -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"; }; };
@@ -301,7 +301,7 @@
 		2342AF1BD3B23951ACC303A3 = {isa = PBXBuildFile; fileRef = F9A9B765EC8A1925513B5006 /* $(MAME_DIR)/3rdparty/portmidi/pm_common/portmidi.c */; settings = {COMPILER_FLAGS = "-DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY"; }; };
 		A43E81026B6EC621122FA8D6 = {isa = PBXBuildFile; fileRef = C4CF9F047F67635A151AE295 /* $(MAME_DIR)/3rdparty/portmidi/pm_mac/pmmac.c */; settings = {COMPILER_FLAGS = "-DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY"; }; };
 		556972F4EAB74DB245AED8DD = {isa = PBXBuildFile; fileRef = 3F997C9828A55B7EF0946683 /* $(MAME_DIR)/3rdparty/portmidi/pm_mac/pmmacosxcm.c */; settings = {COMPILER_FLAGS = "-DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY"; }; };
-		2A8E3DB67F4B061EFCFE8132 = {isa = PBXBuildFile; fileRef = 62F176E2DBF31CA01514D57F /* $(MAME_DIR)/3rdparty/portmidi/porttime/ptmacosx_cf.c */; settings = {COMPILER_FLAGS = "-DNO_USE_MIDI -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY"; }; };
+		2A8E3DB67F4B061EFCFE8132 = {isa = PBXBuildFile; fileRef = 62F176E2DBF31CA01514D57F /* $(MAME_DIR)/3rdparty/portmidi/porttime/ptmacosx_cf.c */; settings = {COMPILER_FLAGS = "-DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY"; }; };
 		89A01E17DF23FA7A9186FD35 = {isa = PBXBuildFile; fileRef = 47ECF99424D07594DD5C826E /* $(MAME_DIR)/3rdparty/softfloat3/bochs_ext/extF80_scale.c */; settings = {COMPILER_FLAGS = "-x c++ -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DINLINE_LEVEL=5 -DLITTLEENDIAN=1 -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSOFTFLOAT_FAST_DIV32TO16 -DSOFTFLOAT_FAST_DIV64TO32 -DSOFTFLOAT_FAST_INT64 -DSOFTFLOAT_ROUND_ODD"; }; };
 		221682F58927C24045025B2F = {isa = PBXBuildFile; fileRef = B20045C554D8BA1B80385AF9 /* $(MAME_DIR)/3rdparty/softfloat3/bochs_ext/f2xm1.c */; settings = {COMPILER_FLAGS = "-x c++ -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DINLINE_LEVEL=5 -DLITTLEENDIAN=1 -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSOFTFLOAT_FAST_DIV32TO16 -DSOFTFLOAT_FAST_DIV64TO32 -DSOFTFLOAT_FAST_INT64 -DSOFTFLOAT_ROUND_ODD"; }; };
 		11EE108BC520D08B794BB421 = {isa = PBXBuildFile; fileRef = BCCE8210E46EBF9C4F9D9E78 /* $(MAME_DIR)/3rdparty/softfloat3/bochs_ext/fpatan.c */; settings = {COMPILER_FLAGS = "-x c++ -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DINLINE_LEVEL=5 -DLITTLEENDIAN=1 -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSOFTFLOAT_FAST_DIV32TO16 -DSOFTFLOAT_FAST_DIV64TO32 -DSOFTFLOAT_FAST_INT64 -DSOFTFLOAT_ROUND_ODD"; }; };
@@ -1092,7 +1092,7 @@
 		24EDE7CE7FD6E570DA78D5B1 = {isa = PBXBuildFile; fileRef = FC29E754A10024780AE55FBA /* $(MAME_DIR)/src/osd/modules/lib/osdlib_macosx.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/src/osd/sdl3\" -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSDLMAME_NO_X11"; }; };
 		A6BC492070259E580148A436 = {isa = PBXBuildFile; fileRef = BD7B055250D4DBA6E3637E9D /* $(MAME_DIR)/src/osd/modules/lib/osdobj_common.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/examples/common\" -I\"$(SRCROOT)/../../../mame/src/osd/sdl3\" -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSDLMAME_NO_X11"; }; };
 		C1A2D78F105914DFB1BFD0F0 = {isa = PBXBuildFile; fileRef = E21C160DF4A15AB07678C71B /* $(MAME_DIR)/src/osd/modules/midi/none.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/examples/common\" -I\"$(SRCROOT)/../../../mame/src/osd/sdl3\" -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSDLMAME_NO_X11"; }; };
-		0AC11A458F1C4FDA0E5668C4 = {isa = PBXBuildFile; fileRef = 14D6C9C53C79B78097CD6994 /* $(MAME_DIR)/src/osd/modules/midi/portmidi.cpp */; settings = {COMPILER_FLAGS = "-DNO_USE_MIDI -I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/examples/common\" -I\"$(SRCROOT)/../../../mame/src/osd/sdl3\" -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSDLMAME_NO_X11"; }; };
+		0AC11A458F1C4FDA0E5668C4 = {isa = PBXBuildFile; fileRef = 14D6C9C53C79B78097CD6994 /* $(MAME_DIR)/src/osd/modules/midi/portmidi.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/examples/common\" -I\"$(SRCROOT)/../../../mame/src/osd/sdl3\" -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSDLMAME_NO_X11"; }; };
 		A5A1B21F01E6256C324FA37D = {isa = PBXBuildFile; fileRef = 8952DDA4553CC49962098CF4 /* $(MAME_DIR)/src/osd/modules/monitor/monitor_common.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/examples/common\" -I\"$(SRCROOT)/../../../mame/src/osd/sdl3\" -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSDLMAME_NO_X11"; }; };
 		C8B651FCF32BBCC03C129668 = {isa = PBXBuildFile; fileRef = 46191F242D75FBD35D88DBEB /* $(MAME_DIR)/src/osd/modules/monitor/monitor_dxgi.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/examples/common\" -I\"$(SRCROOT)/../../../mame/src/osd/sdl3\" -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSDLMAME_NO_X11"; }; };
 		44445CE8DCF3ED9574E6078F = {isa = PBXBuildFile; fileRef = 8089EDDF579B39300A31135E /* $(MAME_DIR)/src/osd/modules/monitor/monitor_mac.cpp */; settings = {COMPILER_FLAGS = "-I\"$(SRCROOT)/../../../mame/3rdparty/bgfx/examples/common\" -I\"$(SRCROOT)/../../../mame/src/osd/sdl3\" -DASMJIT_STATIC -DCRLF=2 -DFLAC__NO_DLL -DLSB_FIRST -DNDEBUG -DPUGIXML_HEADER_ONLY -DSDLMAME_NO_X11"; }; };
@@ -3691,7 +3691,6 @@
 					"-lc++",
 					"-framework",
 					CoreMIDI,
-					"-ObjC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover;
 				SDKROOT = iphoneos;
@@ -3710,7 +3709,6 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = NO;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = NO;
-				ENABLE_BITCODE = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -3720,9 +3718,9 @@
 					FLAC__NO_DLL,
 					PUGIXML_HEADER_ONLY,
 					ASMJIT_STATIC,
-					SDLMAME_UNIX,
+					"FORCE_DRC_C_BACKEND=1",
+					"DATAROVER_IOS_NO_JIT_FLUSH=1",
 					SDLMAME_DARWIN,
-					SDLMAME_NO_X11,
 					"USE_XINPUT=0",
 					"USE_XINPUT_WII_LIGHTGUN_HACK=0",
 					"USE_OPENGL=0",
@@ -3842,7 +3840,7 @@
 					"@executable_path/Frameworks",
 				);
 				MAME_DIR = "$(SRCROOT)/../../../mame";
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRoverCore;
 				PRODUCT_NAME = DataRoverCore;
 				SDKROOT = iphoneos;
@@ -3850,7 +3848,6 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = arm64;
 			};
 			name = Debug;
 		};
@@ -3981,7 +3978,6 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = NO;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = NO;
-				ENABLE_BITCODE = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -3991,9 +3987,9 @@
 					FLAC__NO_DLL,
 					PUGIXML_HEADER_ONLY,
 					ASMJIT_STATIC,
-					SDLMAME_UNIX,
+					"FORCE_DRC_C_BACKEND=1",
+					"DATAROVER_IOS_NO_JIT_FLUSH=1",
 					SDLMAME_DARWIN,
-					SDLMAME_NO_X11,
 					"USE_XINPUT=0",
 					"USE_XINPUT_WII_LIGHTGUN_HACK=0",
 					"USE_OPENGL=0",
@@ -4113,7 +4109,7 @@
 					"@executable_path/Frameworks",
 				);
 				MAME_DIR = "$(SRCROOT)/../../../mame";
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRoverCore;
 				PRODUCT_NAME = DataRoverCore;
 				SDKROOT = iphoneos;
@@ -4121,7 +4117,6 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = arm64;
 			};
 			name = Release;
 		};
@@ -4141,7 +4136,6 @@
 					"-lc++",
 					"-framework",
 					CoreMIDI,
-					"-ObjC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover;
 				SDKROOT = iphoneos;

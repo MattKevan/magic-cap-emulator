@@ -185,7 +185,7 @@ targets:
         SUPPORTED_PLATFORMS: iphoneos iphonesimulator
         OTHER_LDFLAGS:
           - -lc++
-          - -framework
+          - "-framework CoreMIDI"
     sources:
       - path: App/DataRoverApp.swift
       - path: App/CoreBridge.swift

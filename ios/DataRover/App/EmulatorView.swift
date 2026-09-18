@@ -24,12 +24,17 @@ import SwiftUI
 final class EmulatorSession: ObservableObject {
     /// Opaque core handle, or nil before boot / after teardown.
     private(set) var handle: UnsafeMutableRawPointer?
+    /// False once teardown begins; gates the blit path off the worker.
+    private(set) var alive = true
 
     init(nvramDir: String, cfgDir: String, romPath: String) {
         handle = coreCreate(nvram: nvramDir, cfg: cfgDir, rom: romPath)
     }
 
+    func invalidate() { alive = false }
+
     deinit {
+        invalidate()
         coreDestroy(handle)
     }
 }
@@ -132,6 +137,7 @@ struct EmulatorView: UIViewRepresentable {
         }
 
         func detach() {
+            session.invalidate()
             displayLink?.invalidate()
             displayLink = nil
             view = nil
@@ -150,15 +156,18 @@ struct EmulatorView: UIViewRepresentable {
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
         func draw(in view: MTKView) {
-            guard let handle = session.handle,
+            guard let sessionHandle = session.handle,
                   let texture,
                   let pipeline,
                   let sampler,
-                  let queue,
+                  let queue else { return }
+            // The core clears its live-machine pointer on exit while the
+            // handle stays non-nil until destroy: re-resolve liveness via
+            // a zero-size probe is impossible, so gate on session.alive.
+            guard session.alive else { return }
+            let (bytes, size) = coreFramebuffer(of: sessionHandle)
+            guard let bytes, size == 480 * 320 / 4,
                   let drawable = view.currentDrawable else { return }
-            // Null-check per the ABI contract: skip NULL frames.
-            let (bytes, size) = coreFramebuffer(of: handle)
-            guard let bytes, size == 480 * 320 / 4 else { return }
             expand2bpp(src: bytes, count: size)
             let region = MTLRegionMake2D(0, 0, 480, 320)
             staging.withUnsafeBytes { buf in
