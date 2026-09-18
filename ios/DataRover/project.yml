@@ -186,6 +186,10 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SUPPORTED_PLATFORMS: iphoneos iphonesimulator
+        OTHER_LDFLAGS:
+          - -lc++
+          - -framework
+          - CoreMIDI
     sources:
       - path: App/DataRoverApp.swift
       - path: App/CoreBridge.swift

@@ -644,6 +644,11 @@
 3rdparty/zstd/lib/decompress/zstd_ddict.c
 3rdparty/zstd/lib/decompress/zstd_decompress.c
 3rdparty/zstd/lib/decompress/zstd_decompress_block.c
+Core/datarover_carboncore_stubs.cpp
+Core/datarover_osd_funcs.cpp
+Core/datarover_osd_modules.cpp
+Core/generated/drivlist.cpp
+Core/generated/version.cpp
 src/devices/bus/heathzenith/h19/tlb.cpp
 src/devices/bus/pccard/3c589.cpp
 src/devices/bus/pccard/ataflash.cpp
@@ -1035,11 +1040,13 @@ src/lib/util/wavwrite.cpp
 src/lib/util/xmlfile.cpp
 src/lib/util/zippath.cpp
 src/libdatarover/datarover_core.cpp
+src/mame/mame.cpp
 src/mame/skeleton/datarover.cpp
 src/osd/asio.cpp
 src/osd/interface/audio.cpp
 src/osd/interface/inputseq.cpp
 src/osd/interface/nethandler.cpp
+src/osd/modules/debugger/none.cpp
 src/osd/modules/diagnostics/diagnostics_win32.cpp
 src/osd/modules/diagnostics/none.cpp
 src/osd/modules/file/posixdir.cpp

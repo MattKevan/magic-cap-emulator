@@ -51,6 +51,7 @@ def main():
     with open(pbxproj) as f:
         text = f.read()
     have = set(re.findall(r"\$\(MAME_DIR\)/(\S+?) \*/", text))
+    have |= set(re.findall(r"/\* (Core/\S+?) \*/", text))
     missing = [s for s in srcs if s not in have]
     print(f"{len(srcs)} in file-list, {len(have)} already in pbxproj, {len(missing)} to add")
     if not missing:
@@ -67,8 +68,15 @@ def main():
 
     def flags_for(s):
         lib = owner.get(s)
-        if lib is None:
-            return ""
+        if lib is None or lib == "NO_OWNER":
+            if s.startswith("3rdparty/portmidi/"):
+                lib = "portmidi"
+            elif s.startswith("Core/"):
+                # Local iOS sources/snapshots: base flags suffice (they
+                # include MAME headers via the global HEADER_SEARCH_PATHS).
+                return ""
+            else:
+                return ""
         ei = [i for i in incs.get(lib, []) if i not in global_incs]
         ed = [d for d in defs.get(lib, []) if d.strip('"') not in global_defs]
         flags = [f'-I"$(SRCROOT)/../../../mame/{i}"' for i in ei] + ed
@@ -87,8 +95,22 @@ def main():
             flags = ["-I$(SRCROOT)/../../../mame/3rdparty/flac/src/libFLAC/include",
                      "-I$(SRCROOT)/../../../mame/3rdparty/flac/include",
                      "-include $(SRCROOT)/Core/flac_config_prefix.h"] + flags
+        if s in ("src/osd/modules/midi/portmidi.cpp",
+                   "3rdparty/portmidi/porttime/ptmacosx_cf.c"):
+            # GENie NO_USE_MIDI=1 option path: pm provider degrades to
+            # MODULE_NOT_SUPPORTED; core never opens MIDI devices.
+            flags = ["-DNO_USE_MIDI"] + flags
+        if s == "3rdparty/lsqlite3/lsqlite3.c":
+            flags = ["-x", "c++"] + flags
+        if lib == "lualibs":
+            # GENie project "lualibs": options { "ForceCPP" } — host
+            # lfs.o wants __Z-mangled lua_* like luaengine.o.
+            flags = ["-x", "c++"] + flags
         if lib == "lua":
-            flags = ["-DLUA_USE_IOS"] + flags
+            # GENie project "lua": options { "ForceCPP" } (+ `-x c++` for
+            # gmake). luaengine.h #defines SOL_USING_CXX_LUA so lua_* refs
+            # are C++-mangled; lua TUs must compile as C++ to match.
+            flags = ["-DLUA_USE_IOS", "-x", "c++"] + flags
         if lib == "softfloat3":
             # GENie: buildoptions_cpp { "-x c++" } — bochs_ext .c files use
             # C++ functional casts; compile the whole lib as C++.
@@ -102,6 +124,10 @@ def main():
             flags = ["-fno-objc-arc"] + flags
         return " ".join(flags).replace('"', '\\"')
 
+    def proj_path(s):
+        # Project-local sources stay project-relative; MAME sources route
+        # through $(MAME_DIR).
+        return s if s.startswith("Core/") else f"$(MAME_DIR)/{s}"
     ftype = {"cpp": "sourcecode.cpp.cpp", "c": "sourcecode.c.c",
              "mm": "sourcecode.cpp.objcpp", "m": "sourcecode.c.objc"}
     build_lines, ref_lines, phase_lines = [], [], []
@@ -109,12 +135,12 @@ def main():
         u1, u2 = uuid_for("build:" + s), uuid_for("ref:" + s)
         flags = flags_for(s)
         entry = (f"\t\t{u1} = {{isa = PBXBuildFile; fileRef = {u2} "
-                 f"/* $(MAME_DIR)/{s} */; settings = {{COMPILER_FLAGS = \"{flags}\"; }}; }};\n")
+                 f"/* {proj_path(s)} */; settings = {{COMPILER_FLAGS = \"{flags}\"; }}; }};\n")
         build_lines.append(entry)
         ref_lines.append(
             f"\t\t{u2} = {{isa = PBXFileReference; explicitFileType = {ftype[s.rsplit('.', 1)[-1]]}; "
-            f"path = \"$(MAME_DIR)/{s}\"; sourceTree = SOURCE_ROOT; }};\n")
-        phase_lines.append(f"\t\t\t\t{u1} /* $(MAME_DIR)/{s} in Sources */,\n")
+            f"path = \"{proj_path(s)}\"; sourceTree = SOURCE_ROOT; }};\n")
+        phase_lines.append(f"\t\t\t\t{u1} /* {proj_path(s)} in Sources */,\n")
     text = text.replace("/* End PBXBuildFile section */",
                         "".join(build_lines) + "/* End PBXBuildFile section */", 1)
     text = text.replace("/* End PBXFileReference section */",
@@ -146,6 +172,18 @@ def main():
     if "@MAME_DIR@" in _pt:
         open(_pf, "w").write(_pt.replace("@MAME_DIR@", "/Users/mattkevan/Dev/mame"))
         print("materialized flac_config_prefix.h MAME dir")
+    # Project-local Core/ refs stay project-relative
+    # (path "Core/..." + sourceTree=SOURCE_ROOT): group-relative paths
+    # break the build because these refs are not enclosed in a matching
+    # subgroup. Strip any accidental group-relative rewrite.
+    for _bad, _good in [
+            ('path = "datarover_osd_funcs.cpp"', 'path = "Core/datarover_osd_funcs.cpp"'),
+            ('path = "datarover_osd_modules.cpp"', 'path = "Core/datarover_osd_modules.cpp"'),
+            ('path = "drivlist.cpp"', 'path = "Core/generated/drivlist.cpp"'),
+            ('path = "version.cpp"', 'path = "Core/generated/version.cpp"'),
+            ('path = "generated/drivlist.cpp"', 'path = "Core/generated/drivlist.cpp"'),
+            ('path = "generated/version.cpp"', 'path = "Core/generated/version.cpp"')]:
+        text = text.replace(_bad, _good)
     with open(pbxproj, "w") as f:
         f.write(text)
     print(f"injected {len(missing)} sources into {pbxproj}")
