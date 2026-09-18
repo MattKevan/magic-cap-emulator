@@ -26,15 +26,30 @@ final class EmulatorSession: ObservableObject {
     private(set) var handle: UnsafeMutableRawPointer?
     /// False once teardown begins; gates the blit path off the worker.
     private(set) var alive = true
+    /// True while datarover_create runs (120s watchdog on the worker).
+    /// The container renders a spinner, never a white screen.
+    @Published private(set) var booting = true
     /// Non-nil when datarover_create returned NULL (missing ROM/NVRAM);
     /// the container renders this instead of a black framebuffer view.
     private(set) var bootError: String?
 
     init(nvramDir: String, cfgDir: String, romPath: String) {
-        handle = coreCreate(nvram: nvramDir, cfg: cfgDir, rom: romPath)
-        if handle == nil {
-            alive = false
-            bootError = "Boot failed: ROM not found at \(romPath). Re-import the MagicCap-USA image."
+        // Boot OFF the main thread: datarover_create blocks up to its
+        // 120s ready-watchdog while the worker boots running_machine.
+        // A synchronous call here freezes the UI on the white launch
+        // screen and trips the watchdog (EXC_BAD_ACCESS on thread 10
+        // is the corpse, not the cause). Publish back on MainActor.
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let h = coreCreate(nvram: nvramDir, cfg: cfgDir, rom: romPath)
+            await MainActor.run {
+                guard let self else { coreDestroy(h); return }
+                self.handle = h
+                if h == nil {
+                    self.alive = false
+                    self.bootError = "Boot failed: ROM not found at \(romPath). Re-import the MagicCap-USA image."
+                }
+                self.booting = false
+            }
         }
     }
 

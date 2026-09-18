@@ -142,7 +142,17 @@ struct EmulatorContainerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let error = session.bootError {
+            if session.booting {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Booting DataRover…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.black)
+            } else if let error = session.bootError {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 44))
