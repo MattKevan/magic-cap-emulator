@@ -8,10 +8,9 @@
 // drawn as an aspect-fit textured quad (letterboxed on black). No per-frame
 // allocation: texture, pipeline, sampler, queue, and staging all persist.
 //
-// Guest word order: the 2bpp words are little-endian guest DRAM words.
-// Byte i of the ABI buffer holds pixels 4i..4i+3 starting at the MSB
-// pair, matching screen_update's BIT(pixels, 30 - 2*(x&15), 2) readout:
-// within each byte, pixel (x&3)==0 is bits 7-6, (x&3)==3 is bits 1-0.
+// Guest words are stored little-endian in DRAM. The LCD scans each word
+// from bits 31..30 down to bits 1..0, so reverse bytes within each 32-bit
+// word before decoding the four MSB-first pixel pairs in each byte.
 // Grayscale levels mirror the driver's LEVEL table { 0xff, 0xaa, 0x55, 0x00 }.
 //
 // The core free-runs its own emulation thread (datarover_create boots
@@ -37,8 +36,7 @@ final class EmulatorSession: ObservableObject {
         // Boot OFF the main thread: datarover_create blocks up to its
         // 120s ready-watchdog while the worker boots running_machine.
         // A synchronous call here freezes the UI on the white launch
-        // screen and trips the watchdog (EXC_BAD_ACCESS on thread 10
-        // is the corpse, not the cause). Publish back on MainActor.
+        // screen and can trip the launch watchdog. Publish on MainActor.
         Task.detached(priority: .userInitiated) { [weak self] in
             let h = coreCreate(nvram: nvramDir, cfg: cfgDir, rom: romPath)
             await MainActor.run {
@@ -103,7 +101,7 @@ struct EmulatorView: UIViewRepresentable {
         // Grayscale levels mirroring the driver's LEVEL table.
         private static let levels: [UInt8] = [0xff, 0xaa, 0x55, 0x00]
 
-        // Runtime-compiled blit shader: fullscreen triangle textured quad.
+        // Runtime-compiled blit shader: bounded, aspect-fit textured quad.
         // uv (0,0) is the first uploaded texel (guest top-left); the CPU
         // side passes the aspect-fit NDC scale so the drawable letterboxes.
         private static let shaderSource = """
@@ -111,8 +109,8 @@ struct EmulatorView: UIViewRepresentable {
         using namespace metal;
         struct VSOut { float4 pos [[position]]; float2 uv; };
         vertex VSOut blitVertex(uint vid [[vertex_id]], constant float2 *scale [[buffer(0)]]) {
-            float2 pos[3] = { float2(-1.0, -1.0), float2(3.0, -1.0), float2(-1.0, 3.0) };
-            float2 uv[3] = { float2(0.0, 1.0), float2(2.0, 1.0), float2(0.0, -1.0) };
+            float2 pos[4] = { float2(-1.0, -1.0), float2(1.0, -1.0), float2(-1.0, 1.0), float2(1.0, 1.0) };
+            float2 uv[4] = { float2(0.0, 1.0), float2(1.0, 1.0), float2(0.0, 0.0), float2(1.0, 0.0) };
             VSOut out;
             out.pos = float4(pos[vid] * (*scale), 0.0, 1.0);
             out.uv = uv[vid];
@@ -178,18 +176,13 @@ struct EmulatorView: UIViewRepresentable {
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
         func draw(in view: MTKView) {
-            // Snapshot coordinator state at entry: detach() nils these on
-            // teardown while the display link may still fire once, and
-            // KERN_INVALID_ADDRESS at 0x40 is an ivar read off a freed
-            // Coordinator (texture/pipeline/sampler/queue ivars).
+            // Keep the render resources alive for the duration of this draw.
             guard let sessionHandle = session.handle,
                   let texture = texture,
                   let pipeline = pipeline,
                   let sampler = sampler,
                   let queue = queue else { return }
-            // The core clears its live-machine pointer on exit while the
-            // handle stays non-nil until destroy: re-resolve liveness via
-            // a zero-size probe is impossible, so gate on session.alive.
+            // The core returns nil when emulation has stopped.
             guard session.alive else { return }
             let (bytes, size) = coreFramebuffer(of: sessionHandle)
             guard let bytes, size == 480 * 320 / 4,
@@ -216,7 +209,7 @@ struct EmulatorView: UIViewRepresentable {
             encoder.setVertexBytes(&scale, length: MemoryLayout<SIMD2<Float>>.size, index: 0)
             encoder.setFragmentTexture(texture, index: 0)
             encoder.setFragmentSamplerState(sampler, index: 0)
-            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+            encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
             encoder.endEncoding()
             buffer.present(drawable)
             buffer.commit()
@@ -229,7 +222,7 @@ struct EmulatorView: UIViewRepresentable {
             staging.withUnsafeMutableBytes { raw in
                 let dst = raw.bindMemory(to: UInt8.self).baseAddress!
                 for i in 0 ..< count {
-                    let byte = src[i]
+                    let byte = src[i ^ 3]
                     let base = i * 16 // 4 pixels * 4 bytes
                     // Unrolled: 4 pixels per source byte, MSB pair first.
                     dst[base + 0] = levels[Int((byte >> 6) & 0x3)]
