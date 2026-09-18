@@ -11,9 +11,7 @@ settingGroups:
       CLANG_CXX_LANGUAGE_STANDARD: c++20
       CLANG_CXX_LIBRARY: libc++
       IPHONEOS_DEPLOYMENT_TARGET: "16.0"
-      SDKROOT: iphoneos
-      ONLY_ACTIVE_ARCH: YES
-      ENABLE_BITCODE: NO
+      ONLY_ACTIVE_ARCH: NO
       GCC_OPTIMIZATION_LEVEL: s
       SWIFT_VERSION: "5.0"
       HEADER_SEARCH_PATHS:
@@ -72,9 +70,9 @@ settingGroups:
         - FLAC__NO_DLL
         - PUGIXML_HEADER_ONLY
         - ASMJIT_STATIC
-        - SDLMAME_UNIX
+        - FORCE_DRC_C_BACKEND=1
+        - DATAROVER_IOS_NO_JIT_FLUSH=1
         - SDLMAME_DARWIN
-        - SDLMAME_NO_X11
         - USE_XINPUT=0
         - USE_XINPUT_WII_LIGHTGUN_HACK=0
         - USE_OPENGL=0
@@ -155,7 +153,6 @@ targets:
         SKIP_INSTALL: YES
         SUPPORTED_PLATFORMS: iphoneos iphonesimulator
         ARCHS: $(ARCHS_STANDARD)
-        VALID_ARCHS: arm64
         GCC_C_LANGUAGE_STANDARD: gnu17
         CLANG_ENABLE_MODULES: NO
         CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF: NO
@@ -189,7 +186,6 @@ targets:
         OTHER_LDFLAGS:
           - -lc++
           - -framework
-          - CoreMIDI
     sources:
       - path: App/DataRoverApp.swift
       - path: App/CoreBridge.swift

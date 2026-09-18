@@ -95,11 +95,9 @@ def main():
             flags = ["-I$(SRCROOT)/../../../mame/3rdparty/flac/src/libFLAC/include",
                      "-I$(SRCROOT)/../../../mame/3rdparty/flac/include",
                      "-include $(SRCROOT)/Core/flac_config_prefix.h"] + flags
-        if s in ("src/osd/modules/midi/portmidi.cpp",
-                   "3rdparty/portmidi/porttime/ptmacosx_cf.c"):
-            # GENie NO_USE_MIDI=1 option path: pm provider degrades to
-            # MODULE_NOT_SUPPORTED; core never opens MIDI devices.
-            flags = ["-DNO_USE_MIDI"] + flags
+        if s.endswith(".mm"):
+            # bgfx ObjC files use manual retain/release (GENie: no ARC)
+            flags = ["-fno-objc-arc"] + flags
         if s == "3rdparty/lsqlite3/lsqlite3.c":
             flags = ["-x", "c++"] + flags
         if lib == "lualibs":
@@ -134,6 +132,8 @@ def main():
     for s in missing:
         u1, u2 = uuid_for("build:" + s), uuid_for("ref:" + s)
         flags = flags_for(s)
+        if flags == "SKIP":
+            continue
         entry = (f"\t\t{u1} = {{isa = PBXBuildFile; fileRef = {u2} "
                  f"/* {proj_path(s)} */; settings = {{COMPILER_FLAGS = \"{flags}\"; }}; }};\n")
         build_lines.append(entry)
