@@ -96,7 +96,7 @@ struct EmulatorControlsSheet: View {
                 Section {
                     Text(session.saveMessage.isEmpty ? "State is saved automatically when you leave the app." : session.saveMessage)
                         .foregroundStyle(.secondary)
-                    Text("Packages install into the running DataRover over the in-process serial link. Leave it on its desk while a transfer runs.")
+                    Text("To install a package, open the Storeroom computer on the DataRover first, then choose the file here. The transfer runs while the DataRover is left on that screen.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }

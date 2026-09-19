@@ -189,53 +189,44 @@ acceptances wired into `tests/`; macOS CLI/Linux parity preserved.
 
 ## Findings (2026-09-19, first implementation pass)
 
-Phase 0's code is in place and builds for the iOS simulator and app: an
-`rs232_host_channel` (mutex-guarded byte deques) is created with the core,
-handed to the `null_modem` card on the emulation thread, and the PCLink
-handshake now runs over it, preferring the channel and falling back to the PTY
-slave. The core also exposes phase-granular `datarover_install_progress` and
-`datarover_emulated_seconds` (the latter verified to track wall time 1:1 under
-throttling), and the iOS app calls the install API with progress instead of
-reporting "not installed".
+Phase 0 and the iOS half of Phase 1 are done and verified: the in-process
+channel carries a full package install in the iOS simulator.
 
-**The transfer does not complete. Two questions remain, and one earlier
-conclusion in this document was wrong and is corrected here.**
+**What landed.** An `rs232_host_channel` (mutex-guarded byte deques) is created
+with the core, handed to the `null_modem` card on the emulation thread, and the
+PCLink handshake runs over it, preferring the channel and falling back to the
+PTY slave. The core seeds the Magic Bus accessory configuration on first boot,
+exposes phase-granular `datarover_install_progress` and
+`datarover_emulated_seconds`, and the iOS app calls the install API with
+progress instead of reporting "not installed".
 
-- **MAME's `null_modem` card is not the problem.** Run the *unmodified* CLI
-  harness Lua with `-rs2321 null_modem -bitbanger <file>` and the guest writes
-  a 1075-byte opening exchange into the capture: `ChMa` followed by five
-  frames decoding to one `Cnct` packet with a 1028-byte payload. The guest does
-  speak over that card.
-- **The Magic Bus accessory configuration gates whether the guest tries at
-  all.** In the iOS core, with the CLI's generated `cfg/datarover840.cfg`
-  present, the card counted the same 1075 bytes. With no config file, or with a
-  config containing only a keyboard-enable or only the harness's
-  `MAGICBUS_ACCESSORY` port entry, the guest transmitted nothing across a full
-  180 s window. Which entry is load-bearing is not yet isolated.
-- **The host never observed those bytes on the channel.** In the run where the
-  card counted 1075 bytes, the handshake still reported progress 0 — no bytes
-  reached `channel_link::read_available`. The diagnostics used file-static
-  counters, which cannot distinguish device instances, so the leading
-  candidate is that the wired card instance is not the live one at the time
-  the guest transmits (the core wires the channel from the first frame
-  callback, after slot resolution). Re-running with per-instance identity in
-  the trace settles it.
-- **Driver-side line signals are ruled out.** The driver wires only TXD/RXD to
-  the slot (`datarover.cpp:4862-4866`), sets no `dcd_handler`/`dsr_handler`/
-  `cts_handler`, and `datarover_uart_device` is a plain
-  `device_buffered_serial_interface` with no modem-status register, so
-  asserting DCD/DSR/CTS from the card cannot be what the guest waits for.
+**Verification.** `src/libdatarover/tests/install.cpp` in the MAME fork drives
+the CLI harness's taps, starting the host install *before* the
+Storeroom-computer tap because that tap is what makes the guest emit
+`ChMa`/`Cnct` (`docs/pclink.md:105-128`). It passes in the booted iPhone 16
+simulator in about a minute, and the guest's Storeroom then shows the package
+as a 21K object with free space reduced accordingly.
 
-Next, in order: (1) trace per-instance identity and the channel's queue depth
-when the guest transmits, to fix or confirm the wiring; (2) bisect the config
-entries the guest needs, then have the core apply them itself, since the app
-has no config file; (3) re-run `src/libdatarover/tests/install.cpp` — the
-probe written for this — until it passes in the simulator.
+**Four defects had to be fixed to get there**, all in the in-process path:
 
-Until that lands, the iOS and macOS apps attempt the install and report the
-guest's refusal rather than a false success — still an improvement on the
-previous behaviour, where the core had no slave path at all and returned
-failure immediately.
+1. `channel_link::read_available` read with `device_read`, which drains the
+   host→device queue. The host therefore never saw the guest's bytes and could
+   steal back its own writes. It must use `host_read`.
+2. The install reset the channel at start, discarding the handshake the guest
+   had already queued. A live channel must keep its queue.
+3. Packet decoding required the whole buffer to be exactly one packet, so the
+   guest's queued retries defeated it. It now decodes the first packet and
+   reports the wire bytes consumed, resynchronising on `ChMa`.
+4. `Cntd` was written as one packet followed by half of one
+   (`cntd.insert(..., cntd.begin(), cntd.begin() + cntd.size() / 2)`). Magic Cap
+   requires two complete acknowledgements — the CLI harness's `host-wire.bin`
+   shows two identical `Cntd` frames — and without the second the guest
+   accepts nothing and never answers `Pong`.
+
+One earlier claim in this document was wrong and is retracted: `null_modem` was
+never at fault. The CLI with `-rs2321 null_modem -bitbanger <file>` captures the
+guest's 1075-byte opening exchange, and the guest speaks over that card exactly
+as it does over `pty`.
 
 ## Open decisions
 

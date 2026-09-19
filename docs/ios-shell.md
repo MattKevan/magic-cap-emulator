@@ -22,15 +22,15 @@ installs it into the running guest through the core's in-process PCLink
 channel, showing progress and the guest's verdict. The core prefers that
 channel over the desktop PTY slave, which the iOS sandbox cannot create.
 
-The transfer does not complete yet, for two reasons that are still open. The
-guest only attempts PCLink when the Magic Bus accessory is configured as the
-CLI harness configures it, so a core with no config file (and one with only a
-keyboard-enable or port entry) never transmits. When the config is present the
-card counts the guest's 1075-byte opening exchange — `ChMa` plus a five-frame
-`Cnct` packet, the same bytes the CLI harness captures — but those bytes have
-not yet been observed on the in-process channel, so the wiring between the
-card instance and the channel is the other open item. See the findings in
-`docs/superpowers/plans/2026-09-19-host-sync-network-packages-tls.md`.
+The guest speaks first, so the transfer starts when the user opens the
+Storeroom computer on the DataRover; the app says so in its install banner and
+in the package sheet. The core seeds the Magic Bus accessory configuration on
+first boot, because without it the guest never offers a link at all.
+
+`src/libdatarover/tests/install.cpp` (in the MAME fork) is the regression: it
+drives the same taps the CLI harness uses, starts the host install before the
+Storeroom-computer tap, and passes `PASS in-process PCLink package install`
+with the package counted in the guest's Storeroom storage.
 
 ## Clock investigation
 

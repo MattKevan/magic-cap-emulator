@@ -156,7 +156,9 @@ final class EmulatorSession: ObservableObject {
         let name = url.lastPathComponent
         installing = true
         installProgress = 0
-        packageMessage = "Installing \(name)…"
+        // The guest speaks first, and only once its Storeroom computer is
+        // opened, so say what the user has to do on the device.
+        packageMessage = "Installing \(name). Open the Storeroom computer on the DataRover to start the transfer."
         Task.detached(priority: .userInitiated) { [weak self] in
             let data: Data
             do {
