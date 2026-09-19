@@ -39,6 +39,25 @@ func corePen(_ handle: UnsafeMutableRawPointer, phase: PenPhase, x: Int, y: Int)
     }
 }
 
+/// Install a Magic Cap package into the running guest over the in-process
+/// PCLink channel. Blocking for the whole handshake — the guest paces the
+/// transfer — so callers must run it off the main thread. Returns true when
+/// the guest confirmed with its final reply.
+func coreInstallPackage(_ handle: UnsafeMutableRawPointer, data: Data, filename: String) -> Bool {
+    guard !data.isEmpty else { return false }
+    return data.withUnsafeBytes { raw -> Bool in
+        guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return false }
+        return filename.withCString { name in
+            datarover_install_package_named(handle, base, data.count, name) == 0
+        }
+    }
+}
+
+/// Progress of an install running on another thread: 0-100, or -1 when none.
+func coreInstallProgress(_ handle: UnsafeMutableRawPointer) -> Int {
+    Int(datarover_install_progress(handle))
+}
+
 import UIKit
 
 /// UI-owned session; the C core serializes controls and saves on its worker.
@@ -49,6 +68,9 @@ final class EmulatorSession: ObservableObject {
     @Published private(set) var bootError: String?
     @Published private(set) var isPaused = false
     @Published private(set) var saveMessage = ""
+    @Published private(set) var installing = false
+    @Published private(set) var installProgress = -1
+    @Published private(set) var packageMessage = ""
     private var foreground = true
     private var menuVisible = false
 
@@ -122,6 +144,51 @@ final class EmulatorSession: ObservableObject {
         guard let handle else { return }
         datarover_request_save(handle)
         datarover_restart(handle)
+    }
+
+    /// Keep a copy of the picked package in the container, then install it into
+    /// the running guest. The handshake is guest-paced and blocking, so it runs
+    /// off the main thread; progress is polled for the UI. The caller must leave
+    /// the emulator running (not paused behind a sheet), or the guest never
+    /// answers the PCLink request.
+    func installPackage(_ url: URL) {
+        guard let handle, !installing else { return }
+        let name = url.lastPathComponent
+        installing = true
+        installProgress = 0
+        packageMessage = "Installing \(name)…"
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let data: Data
+            do {
+                let stored = try PackageImport.store(url)
+                data = try Data(contentsOf: stored)
+            } catch {
+                await MainActor.run { self?.finishInstall(ok: false, name: name) }
+                return
+            }
+            let poll = Task { @MainActor [weak self] in
+                while !Task.isCancelled {
+                    guard let self, let handle = self.handle else { return }
+                    self.installProgress = coreInstallProgress(handle)
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                }
+            }
+            let ok = coreInstallPackage(handle, data: data, filename: name)
+            poll.cancel()
+            await MainActor.run { self?.finishInstall(ok: ok, name: name) }
+        }
+    }
+
+    private func finishInstall(ok: Bool, name: String) {
+        installing = false
+        installProgress = -1
+        packageMessage = ok
+            ? "\(name) installed."
+            : "The DataRover did not accept \(name). Leave it running on its desk and try again."
+    }
+
+    func clearPackageMessage() {
+        packageMessage = ""
     }
 
     deinit { coreDestroy(handle) }

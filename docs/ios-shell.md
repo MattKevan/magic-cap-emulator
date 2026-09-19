@@ -17,10 +17,22 @@ invalid saves fall back to booting from NVRAM. Force termination before a save
 finishes can lose changes since the previous checkpoint. Saves are tied to the
 current core's state format; NVRAM fallback may contain older data.
 
-Package import currently stores the selected file in Documents/packages and
-explicitly reports that it is not installed. The desktop installer relies on a
-PTY serial transport unavailable in the iOS sandbox; an in-process transport
-is needed for actual guest installation.
+Package import copies the selected file into Documents/packages and then
+installs it into the running guest through the core's in-process PCLink
+channel, showing progress and the guest's verdict. The core prefers that
+channel over the desktop PTY slave, which the iOS sandbox cannot create.
+
+The transfer does not complete yet: with the slot set to MAME's `null_modem`
+card the guest never writes a byte to UART A, so the handshake times out and
+the guest reports "your communicator can't link to a computer". The same guest
+dialog appears in the CLI harness when it is run with `-rs2321 null_modem` and
+no host attached, and the driver wires only TXD/RXD between the UART and the
+slot, so no modem-control line can be the cause. The guest does transmit over
+the `pty` card (the CLI PCLink regression captures its 1089-byte opening
+exchange). Isolating what makes the guest willing to transmit — card type,
+IrDA PTY availability, the Magic Bus accessory configuration, or emulation
+speed — is the open work item; see the plan in
+`docs/superpowers/plans/2026-09-19-host-sync-network-packages-tls.md`.
 
 ## Clock investigation
 

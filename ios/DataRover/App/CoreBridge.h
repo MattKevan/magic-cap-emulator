@@ -33,6 +33,8 @@ int datarover_install_package(void * _Nullable machine,
 int datarover_install_package_named(void * _Nullable machine,
                                     const uint8_t * _Nullable data, size_t len,
                                     const char * _Nullable filename_utf8);
+// 0-100 while an install runs on the calling thread, -1 when none is in flight.
+int datarover_install_progress(void * _Nullable machine);
 
 
 // Thread-safe controls; changes are applied by the emulation worker.

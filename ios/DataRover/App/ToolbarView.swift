@@ -96,7 +96,7 @@ struct EmulatorControlsSheet: View {
                 Section {
                     Text(session.saveMessage.isEmpty ? "State is saved automatically when you leave the app." : session.saveMessage)
                         .foregroundStyle(.secondary)
-                    Text("Packages are kept on this iPhone. Installing them into Magic Cap requires a serial connection, which is not available in this build.")
+                    Text("Packages install into the running DataRover over the in-process serial link. Leave it on its desk while a transfer runs.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }

@@ -120,6 +120,9 @@ struct EmulatorContainerView: View {
                     EmulatorView(session: session)
                     TouchPenView(session: session)
                 }
+                if session.installing || !session.packageMessage.isEmpty {
+                    InstallStatusBanner(session: session)
+                }
             }
         }
         .onAppear {
@@ -136,14 +139,41 @@ struct EmulatorContainerView: View {
                 .fileImporter(isPresented: $showPackageImporter, allowedContentTypes: [.magicCapPackage, .zip, .data]) { result in
                     do {
                         let url = try result.get()
-                        let dest = try PackageImport.store(url)
-                        importMessage = "Saved \(dest.lastPathComponent). The package has not been installed into Magic Cap."
+                        // The guest paces the transfer, so it must be running:
+                        // close the sheet, which un-pauses the emulation worker.
+                        showControls = false
+                        session.installPackage(url)
                     } catch { importMessage = error.localizedDescription }
                 }
                 .alert("Package", isPresented: Binding(get: { importMessage != nil }, set: { if !$0 { importMessage = nil } })) {
                     Button("OK") { importMessage = nil }
                 } message: { Text(importMessage ?? "") }
         }
+    }
+}
+
+/// Install progress and result, overlaid on the guest screen. Tap to dismiss
+/// a finished message.
+struct InstallStatusBanner: View {
+    @ObservedObject var session: EmulatorSession
+
+    var body: some View {
+        VStack(spacing: 10) {
+            if session.installing {
+                ProgressView(value: session.installProgress >= 0 ? Double(session.installProgress) / 100 : nil)
+                    .progressViewStyle(.linear)
+                    .frame(width: 240)
+            }
+            Text(session.packageMessage)
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+        }
+        .padding(14)
+        .background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 14))
+        .foregroundStyle(.white)
+        .padding()
+        .onTapGesture { if !session.installing { session.clearPackageMessage() } }
+        .accessibilityElement(children: .combine)
     }
 }
 
