@@ -34,4 +34,14 @@ int datarover_install_package_named(void * _Nullable machine,
                                     const uint8_t * _Nullable data, size_t len,
                                     const char * _Nullable filename_utf8);
 
+
+// Thread-safe controls; changes are applied by the emulation worker.
+void datarover_set_option(void * _Nullable machine, int side, int pressed);
+void datarover_set_paused(void * _Nullable machine, int paused);
+void datarover_request_save(void * _Nullable machine);
+// 0: not saved, 1: pending, 2: saved, -1: failed.
+int datarover_save_status(void * _Nullable machine);
+uint64_t datarover_frame_revision(void * _Nullable machine);
+void datarover_restart(void * _Nullable machine);
+
 NS_ASSUME_NONNULL_END

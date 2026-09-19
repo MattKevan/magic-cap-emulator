@@ -19,49 +19,9 @@
 import MetalKit
 import SwiftUI
 
-/// Observable emulation session: owns the core handle lifecycle.
-final class EmulatorSession: ObservableObject {
-    /// Opaque core handle, or nil before boot / after teardown.
-    private(set) var handle: UnsafeMutableRawPointer?
-    /// False once teardown begins; gates the blit path off the worker.
-    private(set) var alive = true
-    /// True while datarover_create runs (120s watchdog on the worker).
-    /// The container renders a spinner, never a white screen.
-    @Published private(set) var booting = true
-    /// Non-nil when datarover_create returned NULL (missing ROM/NVRAM);
-    /// the container renders this instead of a black framebuffer view.
-    private(set) var bootError: String?
-
-    init(nvramDir: String, cfgDir: String, romPath: String) {
-        // Boot OFF the main thread: datarover_create blocks up to its
-        // 120s ready-watchdog while the worker boots running_machine.
-        // A synchronous call here freezes the UI on the white launch
-        // screen and can trip the launch watchdog. Publish on MainActor.
-        Task.detached(priority: .userInitiated) { [weak self] in
-            let h = coreCreate(nvram: nvramDir, cfg: cfgDir, rom: romPath)
-            await MainActor.run {
-                guard let self else { coreDestroy(h); return }
-                self.handle = h
-                if h == nil {
-                    self.alive = false
-                    self.bootError = "Boot failed: ROM not found at \(romPath). Re-import the MagicCap-USA image."
-                }
-                self.booting = false
-            }
-        }
-    }
-
-    func invalidate() { alive = false }
-
-    deinit {
-        invalidate()
-        coreDestroy(handle)
-    }
-}
-
 /// UIViewRepresentable MTKView rendering the guest framebuffer aspect-fit.
 struct EmulatorView: UIViewRepresentable {
-    var session: EmulatorSession
+    @ObservedObject var session: EmulatorSession
 
     func makeCoordinator() -> Coordinator {
         Coordinator(session: session)
@@ -79,7 +39,9 @@ struct EmulatorView: UIViewRepresentable {
         return mtkView
     }
 
-    func updateUIView(_ uiView: MTKView, context: Context) {}
+    func updateUIView(_ uiView: MTKView, context: Context) {
+        context.coordinator.setPaused(session.isPaused)
+    }
 
     static func dismantleUIView(_ uiView: MTKView, coordinator: Coordinator) {
         coordinator.detach()
@@ -91,6 +53,7 @@ struct EmulatorView: UIViewRepresentable {
         private let session: EmulatorSession
         private weak var view: MTKView?
         private var displayLink: CADisplayLink?
+        private var lastRevision: UInt64 = 0
         private var queue: MTLCommandQueue?
         private var texture: MTLTexture?
         private var pipeline: MTLRenderPipelineState?
@@ -125,6 +88,8 @@ struct EmulatorView: UIViewRepresentable {
             self.session = session
         }
 
+        func setPaused(_ paused: Bool) { displayLink?.isPaused = paused }
+
         func attach(view: MTKView) {
             self.view = view
             guard let device = view.device else { return }
@@ -152,12 +117,12 @@ struct EmulatorView: UIViewRepresentable {
             samplerDesc.tAddressMode = .clampToEdge
             sampler = device.makeSamplerState(descriptor: samplerDesc)
             let link = CADisplayLink(target: self, selector: #selector(tick))
+            link.preferredFramesPerSecond = 30
             link.add(to: .main, forMode: .common)
             displayLink = link
         }
 
         func detach() {
-            session.invalidate()
             displayLink?.invalidate()
             displayLink = nil
             view = nil
@@ -168,12 +133,13 @@ struct EmulatorView: UIViewRepresentable {
         }
 
         @objc private func tick() {
+            guard !session.isPaused else { return }
             view?.draw()
         }
 
         // MARK: MTKViewDelegate
 
-        func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+        func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) { lastRevision = 0 }
 
         func draw(in view: MTKView) {
             // Keep the render resources alive for the duration of this draw.
@@ -184,6 +150,8 @@ struct EmulatorView: UIViewRepresentable {
                   let queue = queue else { return }
             // The core returns nil when emulation has stopped.
             guard session.alive else { return }
+            let revision = datarover_frame_revision(sessionHandle)
+            guard revision != lastRevision else { return }
             let (bytes, size) = coreFramebuffer(of: sessionHandle)
             guard let bytes, size == 480 * 320 / 4,
                   let drawable = view.currentDrawable else { return }
@@ -213,6 +181,7 @@ struct EmulatorView: UIViewRepresentable {
             encoder.endEncoding()
             buffer.present(drawable)
             buffer.commit()
+            lastRevision = revision
         }
 
         /// Expand `count` 2bpp bytes into the persistent RGBA8 staging buffer.

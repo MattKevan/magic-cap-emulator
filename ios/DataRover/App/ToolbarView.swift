@@ -1,46 +1,107 @@
-// ToolbarView.swift — Power + Option Button with mac pulse semantics.
-//
-// Mechanism: the core ABI has no button entry point (9 functions:
-// lifecycle + framebuffer + pen + package only), and the app target links
-// libDataRoverCore.a statically, so it cannot reach MAME's ioport
-// internals either. The buttons below therefore send the pen/touch events
-// the guest already understands; a true hardware pulse
-// (ioport_field::set_value(1) + 150ms delayed clear_value on
-// POWER_BUTTON / OPTION_BUTTON, firing power_changed/option_changed
-// exactly like the mac pulsePort in src/osd/sdl3/datarover_menu.mm:230
-// and the KEYCODE_END / KEYCODE_LALT bindings) needs a small fork-side
-// addition — proposed `datarover_press_power` / `datarover_press_option`
-// in datarover_core.h/.cpp, Task 3 or a fork round. Until then the
-// buttons are visible, tappable, and clearly marked unavailable.
 import SwiftUI
 
-/// Emulator toolbar: momentary Power + Option buttons.
-///
-/// Same pulse semantics as mac once the fork exposes the injection
-/// point: press drives the port high, a 150ms delayed release clears it.
-struct ToolbarView: View {
-    /// Nil while the fork has no button ABI: buttons render disabled with
-    /// a "needs core support" label so the gap is explicit, not silent.
-    var pressPower: (() -> Void)?
-    var pressOption: (() -> Void)?
+/// The two side rails share the original device's Option input.
+struct DeviceShellView<Screen: View>: View {
+    @ObservedObject var session: EmulatorSession
+    var openMenu: () -> Void
+    @ViewBuilder var screen: () -> Screen
+    private let shell = Color(red: 74 / 255, green: 75 / 255, blue: 77 / 255)
 
     var body: some View {
-        HStack(spacing: 24) {
-            Button {
-                pressPower?()
-            } label: {
-                Label("Power", systemImage: "power")
+        GeometryReader { geometry in
+            let rail = min(142.0, max(72.0, geometry.size.width * 0.163))
+            let width = min(geometry.size.width - rail * 2 - 20, (geometry.size.height - 20) * 1.5)
+            HStack(spacing: 0) {
+                VStack {
+                    OptionControl(side: 0, session: session)
+                    Spacer(minLength: 12)
+                    Button(action: openMenu) {
+                        Image("GeneralMagicLogo")
+                            .resizable().scaledToFit()
+                            .frame(width: 64, height: 75)
+                            .rotationEffect(.degrees(90))
+                            .frame(width: min(76, rail - 20), height: 64)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("DataRover controls")
+                }
+                .padding(.vertical, 24)
+                .frame(width: rail)
+                screen()
+                    .frame(width: max(1, width), height: max(1, width / 1.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.12), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.5), radius: 5, y: 3)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack {
+                    OptionControl(side: 1, session: session)
+                    Spacer(minLength: 12)
+                }
+                .padding(.vertical, 24)
+                .frame(width: rail)
             }
-            .disabled(pressPower == nil)
-
-            Button {
-                pressOption?()
-            } label: {
-                Label("Option", systemImage: "option")
-            }
-            .disabled(pressOption == nil)
+            .background(shell)
         }
-        .buttonStyle(.bordered)
-        .padding(.vertical, 8)
+        .background(shell.ignoresSafeArea())
+    }
+}
+
+private struct OptionControl: View {
+    let side: Int
+    @ObservedObject var session: EmulatorSession
+    @GestureState private var pressed = false
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text("OPTION").font(.custom("Helvetica-Bold", size: 12)).foregroundStyle(.white)
+            ZStack {
+                Image("OptionRing").resizable().frame(width: 74, height: 74)
+                Image("OptionFace").resizable().frame(width: 64, height: 66).offset(y: 3)
+            }
+        }
+            .frame(width: 74, height: 94)
+            .brightness(pressed ? -0.15 : 0)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0)
+                .updating($pressed) { _, state, _ in state = true })
+            .onChange(of: pressed) { down in session.option(side, pressed: down) }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(side == 0 ? "Left Option" : "Right Option")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction {
+                session.option(side, pressed: true)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    session.option(side, pressed: false)
+                }
+            }
+    }
+}
+
+struct EmulatorControlsSheet: View {
+    @ObservedObject var session: EmulatorSession
+    var loadPackage: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button("Save state", systemImage: "square.and.arrow.down") { session.saveNow() }
+                    Button("Restart", systemImage: "arrow.clockwise") {
+                        session.restart()
+                        dismiss()
+                    }
+                    Button("Load package…", systemImage: "shippingbox") { loadPackage() }
+                }
+                Section {
+                    Text(session.saveMessage.isEmpty ? "State is saved automatically when you leave the app." : session.saveMessage)
+                        .foregroundStyle(.secondary)
+                    Text("Packages are kept on this iPhone. Installing them into Magic Cap requires a serial connection, which is not available in this build.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("DataRover")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
     }
 }
