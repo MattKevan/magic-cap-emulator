@@ -15,7 +15,7 @@ global target settings stay shadowing-safe:
   (upstream gates sys_icache_invalidate's header on TARGET_OS_OSX).
 - ocore/osd entries drop the SDL OSD defines (headless: no SDL on iOS).
 
-Usage: python3 scripts/inject_mame_sources.py [--project DIR]
+Usage: python3 scripts/inject_mame_sources.py [--project DIR] [--libmap PATH]
 """
 import argparse
 import hashlib
@@ -28,6 +28,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_PROJ = os.path.normpath(os.path.join(HERE, "..", "DataRover.xcodeproj"))
 LIBMAP = "/tmp/ios_libmap.json"
 
+sys.path.insert(0, HERE)
+import gen_ios_libmap  # noqa: E402  (sibling script, same directory)
+
 
 def uuid_for(key):
     return hashlib.sha1(("datarover:" + key).encode()).hexdigest()[:24].upper()
@@ -39,10 +42,34 @@ def load_file_list():
         return [ln.strip() for ln in f if ln.strip()]
 
 
+def default_mame_dir(project):
+    """MAME_DIR default: a `mame` sibling of the repo root (see project.yml)."""
+    return os.path.normpath(os.path.join(os.path.dirname(project),
+                                         "..", "..", "..", "mame"))
+
+
+def load_libmap(path, mame_dir):
+    """Read the per-lib map, regenerating it from the fork when missing."""
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        pass
+    print(f"{path} missing; regenerating from {mame_dir} "
+          f"(gen_ios_libmap.py)", file=sys.stderr)
+    data = gen_ios_libmap.generate(mame_dir)
+    with open(path, "w") as f:
+        json.dump(data, f, indent=1, sort_keys=True)
+    return data
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--project", default=DEFAULT_PROJ)
+    ap.add_argument("--libmap", default=LIBMAP)
+    ap.add_argument("--mame-dir", default=os.environ.get("MAME_DIR"))
     args = ap.parse_args()
+    mame_dir = args.mame_dir or default_mame_dir(args.project)
     pbxproj = os.path.join(args.project, "project.pbxproj")
     if not os.path.exists(pbxproj):
         print(f"no project at {pbxproj}; run xcodegen generate first", file=sys.stderr)
@@ -56,12 +83,8 @@ def main():
     print(f"{len(srcs)} in file-list, {len(have)} already in pbxproj, {len(missing)} to add")
     if not missing:
         return 0
-    try:
-        m = json.load(open(LIBMAP))
-        owner, incs, defs = m["owner"], m["incs"], m["defs"]
-    except FileNotFoundError:
-        owner, incs, descs = {}, {}, {}
-        defs = {}
+    m = load_libmap(args.libmap, mame_dir)
+    owner, incs, defs = m["owner"], m["incs"], m["defs"]
     global_incs = set(re.findall(r'"\$\(MAME_DIR\)/([^"]+)"', text))
     gdef_region = text.split("GCC_PREPROCESSOR_DEFINITIONS")[1][:8000]
     global_defs = {g.strip().strip('"') for g in re.findall(r"([^,\n]+),", gdef_region)}
@@ -154,24 +177,6 @@ def main():
     mm = matches[idx]
     text = text[:mm.start(1)] + mm.group(1) + "".join(phase_lines) + text[mm.end(1):]
 
-    # Materialize flac_config_prefix.h with the absolute MAME dir (the
-    # #include must be absolute: -Isrc/emu shadows any relative <config.h>).
-    import subprocess
-    try:
-        mamedir = subprocess.run(["xcodebuild", "-project", args.project,
-                                  "-scheme", "DataRoverCore", "-configuration", "Release",
-                                  "-showBuildSettings"],
-                                 capture_output=True, text=True, cwd=os.path.join(HERE, "..")).stdout
-        import re as _re
-        m = _re.search(r"MAME_DIR = (\S+)", mamedir)
-        _md = m.group(1) if m else "$(SRCROOT)/../../../mame"
-    except Exception:
-        _md = "$(SRCROOT)/../../../mame"
-    _pf = os.path.normpath(os.path.join(HERE, "..", "Core", "flac_config_prefix.h"))
-    _pt = open(_pf).read()
-    if "@MAME_DIR@" in _pt:
-        open(_pf, "w").write(_pt.replace("@MAME_DIR@", "/Users/mattkevan/Dev/mame"))
-        print("materialized flac_config_prefix.h MAME dir")
     # Project-local Core/ refs stay project-relative
     # (path "Core/..." + sourceTree=SOURCE_ROOT): group-relative paths
     # break the build because these refs are not enclosed in a matching
