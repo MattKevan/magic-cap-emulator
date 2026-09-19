@@ -22,16 +22,14 @@ installs it into the running guest through the core's in-process PCLink
 channel, showing progress and the guest's verdict. The core prefers that
 channel over the desktop PTY slave, which the iOS sandbox cannot create.
 
-The transfer does not complete yet: with the slot set to MAME's `null_modem`
-card the guest never writes a byte to UART A, so the handshake times out and
-the guest reports "your communicator can't link to a computer". The same guest
-dialog appears in the CLI harness when it is run with `-rs2321 null_modem` and
-no host attached, and the driver wires only TXD/RXD between the UART and the
-slot, so no modem-control line can be the cause. The guest does transmit over
-the `pty` card (the CLI PCLink regression captures its 1089-byte opening
-exchange). Isolating what makes the guest willing to transmit — card type,
-IrDA PTY availability, the Magic Bus accessory configuration, or emulation
-speed — is the open work item; see the plan in
+The transfer does not complete yet, for two reasons that are still open. The
+guest only attempts PCLink when the Magic Bus accessory is configured as the
+CLI harness configures it, so a core with no config file (and one with only a
+keyboard-enable or port entry) never transmits. When the config is present the
+card counts the guest's 1075-byte opening exchange — `ChMa` plus a five-frame
+`Cnct` packet, the same bytes the CLI harness captures — but those bytes have
+not yet been observed on the in-process channel, so the wiring between the
+card instance and the channel is the other open item. See the findings in
 `docs/superpowers/plans/2026-09-19-host-sync-network-packages-tls.md`.
 
 ## Clock investigation

@@ -198,38 +198,44 @@ slave. The core also exposes phase-granular `datarover_install_progress` and
 throttling), and the iOS app calls the install API with progress instead of
 reporting "not installed".
 
-**The transfer does not complete, and the blocker is guest-side, not in the
-channel wiring:**
+**The transfer does not complete. Two questions remain, and one earlier
+conclusion in this document was wrong and is corrected here.**
 
-- With `null_modem` in the slot, the guest never writes a byte to UART A —
-  instrumenting `datarover_state::uart_transmit` and the card's receive path
-  showed zero transmissions across a full 180 s handshake window, while the
-  channel was confirmed wired (`:rs2321:null_modem`, `channel=1`).
-- The guest shows its own "your communicator can't link to a computer" dialog
-  in the *unmodified CLI* too, when that harness is run with
-  `-rs2321 null_modem` and no host attached — so the behaviour is independent
-  of this work.
-- The driver wires only TXD/RXD between the UART and the slot
-  (`datarover.cpp:4862-4866`); it sets no `dcd_handler`/`dsr_handler`/
+- **MAME's `null_modem` card is not the problem.** Run the *unmodified* CLI
+  harness Lua with `-rs2321 null_modem -bitbanger <file>` and the guest writes
+  a 1075-byte opening exchange into the capture: `ChMa` followed by five
+  frames decoding to one `Cnct` packet with a 1028-byte payload. The guest does
+  speak over that card.
+- **The Magic Bus accessory configuration gates whether the guest tries at
+  all.** In the iOS core, with the CLI's generated `cfg/datarover840.cfg`
+  present, the card counted the same 1075 bytes. With no config file, or with a
+  config containing only a keyboard-enable or only the harness's
+  `MAGICBUS_ACCESSORY` port entry, the guest transmitted nothing across a full
+  180 s window. Which entry is load-bearing is not yet isolated.
+- **The host never observed those bytes on the channel.** In the run where the
+  card counted 1075 bytes, the handshake still reported progress 0 — no bytes
+  reached `channel_link::read_available`. The diagnostics used file-static
+  counters, which cannot distinguish device instances, so the leading
+  candidate is that the wired card instance is not the live one at the time
+  the guest transmits (the core wires the channel from the first frame
+  callback, after slot resolution). Re-running with per-instance identity in
+  the trace settles it.
+- **Driver-side line signals are ruled out.** The driver wires only TXD/RXD to
+  the slot (`datarover.cpp:4862-4866`), sets no `dcd_handler`/`dsr_handler`/
   `cts_handler`, and `datarover_uart_device` is a plain
-  `device_buffered_serial_interface` with no modem-status register. Asserting
-  DCD/DSR/CTS from the card therefore cannot be what the guest waits for, and
-  an attempt to do so changed nothing.
-- The guest does transmit over the `pty` card: the CLI regression captures its
-  1089-byte opening exchange.
+  `device_buffered_serial_interface` with no modem-status register, so
+  asserting DCD/DSR/CTS from the card cannot be what the guest waits for.
 
-Candidate causes to isolate next, cheapest first: (1) rebuild the CLI with the
-same instrumentation and run it with `null_modem` *and* the working Lua, to
-separate card type from environment; (2) give the iOS core the harness's
-deterministic `MAGICBUS_ACCESSORY` configuration, since the driver warns the
-ROM counts unanswered Magic Bus assignment as a peripheral failure;
-(3) determine whether the guest's link path needs the IrDA PTY, which opens on
-macOS but not on iOS (`datarover_irda_device::device_start` returns early).
+Next, in order: (1) trace per-instance identity and the channel's queue depth
+when the guest transmits, to fix or confirm the wiring; (2) bisect the config
+entries the guest needs, then have the core apply them itself, since the app
+has no config file; (3) re-run `src/libdatarover/tests/install.cpp` — the
+probe written for this — until it passes in the simulator.
 
-Until one of those lands, the iOS and macOS apps attempt the install and
-report the guest's refusal rather than a false success — which is still a
-strict improvement over the previous behaviour, where the core had no slave
-path at all and returned failure immediately.
+Until that lands, the iOS and macOS apps attempt the install and report the
+guest's refusal rather than a false success — still an improvement on the
+previous behaviour, where the core had no slave path at all and returned
+failure immediately.
 
 ## Open decisions
 
