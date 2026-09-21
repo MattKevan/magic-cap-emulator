@@ -2,7 +2,7 @@ name: DataRover
 options:
   bundleIdPrefix: com.example
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "26.0"
   xcodeVersion: "1600"
 settingGroups:
   mame-base:
@@ -10,7 +10,7 @@ settingGroups:
       MAME_DIR: $(SRCROOT)/../../../mame
       CLANG_CXX_LANGUAGE_STANDARD: c++20
       CLANG_CXX_LIBRARY: libc++
-      IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+      IPHONEOS_DEPLOYMENT_TARGET: "26.0"
       ONLY_ACTIVE_ARCH: NO
       GCC_OPTIMIZATION_LEVEL: s
       SWIFT_VERSION: "5.0"
@@ -145,7 +145,7 @@ targets:
   DataRoverCore:
     type: library.static
     platform: iOS
-    deploymentTarget: "16.0"
+    deploymentTarget: "26.0"
     settings:
       groups: [mame-base]
       base:
@@ -171,7 +171,7 @@ targets:
   DataRover:
     type: application
     platform: iOS
-    deploymentTarget: "16.0"
+    deploymentTarget: "26.0"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.DataRover
@@ -184,7 +184,7 @@ targets:
         INFOPLIST_FILE: App/Info.plist
         SWIFT_OBJC_BRIDGING_HEADER: App/CoreBridge.h
         SWIFT_VERSION: "5.0"
-        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
         SUPPORTED_PLATFORMS: iphoneos iphonesimulator
         OTHER_LDFLAGS:
           - -lc++

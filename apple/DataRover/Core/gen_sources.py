@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate DataRoverCore sources list for the Xcode project from file-list.txt.
 
-Reads ios/DataRover/Core/file-list.txt (MAME_DIR-relative paths) and emits
+Reads apple/DataRover/Core/file-list.txt (MAME_DIR-relative paths) and emits
 a project.yml fragment mapping each source to its Xcode file entry. Files
 needing Objective-C ARC compilation (.mm) get per-file compiler flags;
 excluded-at-build files are noted but kept in the list for auditability.

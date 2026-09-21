@@ -751,7 +751,10 @@ In `apple/DataRover/project.yml`:
 - add at top level: `packages: { DataRoverKit: { path: ../DataRoverKit } }`
 - in `targets.DataRover.dependencies` add `- package: DataRoverKit` with `product: DataRoverShell`
 - remove `SWIFT_OBJC_BRIDGING_HEADER: App/CoreBridge.h`
-- remove the sources entry `- path: App/CoreBridge.h` (buildPhase none), and remove `- path: App/ToolbarView.swift`
+- remove the sources entries `- path: App/CoreBridge.swift`, `- path: App/CoreBridge.h` (buildPhase none), `- path: App/ToolbarView.swift`, and `- path: App/Assets.xcassets` (the catalog moved into the package in Task 3)
+- add `- path: App/HostHooks.swift` after the `App/TouchPenView.swift` entry
+
+The resulting `targets.DataRover.sources` is exactly: `App/AppIcon.icon`, `App/DataRoverApp.swift`, `App/EmulatorView.swift`, `App/TouchPenView.swift`, `App/HostHooks.swift`.
 
 ```bash
 cd apple/DataRover
