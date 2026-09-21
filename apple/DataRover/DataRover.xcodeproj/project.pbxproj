@@ -3709,7 +3709,6 @@
 				OTHER_LDFLAGS = (
 					"-lc++",
 					"-framework CoreMIDI",
-					"-ObjC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover;
 				SDKROOT = iphoneos;
@@ -4154,7 +4153,6 @@
 				OTHER_LDFLAGS = (
 					"-lc++",
 					"-framework CoreMIDI",
-					"-ObjC",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover;
 				SDKROOT = iphoneos;
