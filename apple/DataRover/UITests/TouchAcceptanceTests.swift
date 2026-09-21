@@ -1,8 +1,9 @@
 // Acceptance for the guest touch path: a synthetic touch must reach the guest
 // through TouchPenView -> PenRouter -> GuestGeometry -> corePen, and the guest
-// must repaint. The guest's first-run flow is the full proof: its touch-gated
-// startup screen answers the pen, and so do the three calibration targets,
-// which only advance when the pen lands on the target the guest is waiting for.
+// must repaint. The guest's first-run flow drives the rest of the proof: its
+// touch-gated startup screen answers the pen, and so do the three calibration
+// targets, which only advance when the pen lands on the target the guest is
+// waiting for.
 //
 // Requires the ROM fixture in the app container; skips, rather than fails,
 // when the app shows its "Import ROM…" empty state. It also requires a
@@ -48,7 +49,11 @@ final class TouchAcceptanceTests: XCTestCase {
                                                                     (dx: 0.736, dy: 0.798),
                                                                     (dx: 0.5, dy: 0.475)]
 
-    func testTapReachesTheGuestAndRepaints() throws {
+    /// The window the calibration targets were measured against; the phase is
+    /// skipped on anything else (see `testPressesReachTheGuestAndDriveCalibration`).
+    private let calibratedWindow = CGSize(width: 874, height: 402)
+
+    func testPressesReachTheGuestAndDriveCalibration() throws {
         let app = XCUIApplication()
         app.launch()
 
@@ -62,32 +67,46 @@ final class TouchAcceptanceTests: XCTestCase {
 
         Thread.sleep(forTimeInterval: bootSeconds)
 
+        // Two samples 3 s apart give the press a settled screen to change; on
+        // this fixture the guest's startup screen is pixel-stable, so a pixel
+        // compare isolates the press from anything the guest does on its own.
         let untouchedA = pixels(window)
         Thread.sleep(forTimeInterval: 3)
-        let untouchedB = pixels(window)
-        let screenIsStatic = untouchedA == untouchedB
+        let untouched = pixels(window)
+        let wasStatic = untouchedA == untouched
 
-        let afterPress = pressGuest(window, at: guestCentre)
+        // The press is the acceptance claim, so it has to land for every guest
+        // screen — not just a stable one. Three attempts cover a boot that is
+        // still finishing; after that, silence means the pen path is broken.
+        var afterPress = untouched
+        var attempts = 0
+        repeat {
+            afterPress = pressGuest(window, at: guestCentre)
+            attempts += 1
+        } while afterPress == untouched && attempts < 3
 
-        guard screenIsStatic else {
-            // The touch-gated screen animates on its own, so a pixel compare
-            // cannot isolate the press. The press still has to be serviced:
-            // assert the app stayed alive and the guest is still rendering.
-            XCTAssertEqual(app.state, .runningForeground)
-            XCTAssertTrue(window.exists)
-            add(XCTAttachment(screenshot: window.screenshot()))
-            return
+        XCTAssertNotEqual(untouched, afterPress, """
+            the guest screen never changed after \(attempts) presses — either the pen path is broken, \
+            or the app never reached the guest screen (delete cfg/session.sta in the app container and \
+            re-run). The screen was \(wasStatic ? "static" : "already changing") before the press.
+            """)
+
+        // The target fractions below are measured against this window. On any
+        // other geometry the guest screen sits elsewhere, so the progression
+        // cannot be asserted: say the phase was skipped rather than claim a
+        // workbench arrival that was not verified.
+        guard window.frame.size == calibratedWindow else {
+            throw XCTSkip("""
+                the centre press reached the guest, but the calibration phase is skipped: this window is \
+                \(window.frame.size), not the calibrated \(calibratedWindow) iPhone 17 Pro landscape window
+                """)
         }
 
-        XCTAssertNotEqual(untouchedB, afterPress,
-                          "a pen press must change the guest screen")
-
-        // The guest is pixel-stable, so the first-run recipe is deterministic
-        // and worth driving to its end: each calibration press must produce a
-        // screen this test has not seen before, which the guest only does when
-        // the pen lands on the target it is currently waiting for. The last
-        // one is the Magic Cap workbench (see the attached screenshot).
-        var seen = [untouchedB, afterPress]
+        // Each calibration press must produce a screen this test has not seen
+        // before, which the guest only does when the pen lands on the target it
+        // is currently waiting for. The last one is the Magic Cap workbench
+        // (see the attached screenshot).
+        var seen = [untouched, afterPress]
         for target in calibrationTargets {
             let advanced = pressGuest(window, at: target)
             XCTAssertFalse(seen.contains(advanced),
