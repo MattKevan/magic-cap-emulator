@@ -7,6 +7,61 @@ options:
 packages:
   DataRoverKit:
     path: ../DataRoverKit
+# MAME's include layout is identical on both platforms, so it lives here and
+# both core targets inherit it through their platform group's $(inherited).
+# Core/ios_compat is deliberately absent: it holds stand-ins for the Carbon
+# and CoreAudio headers iOS lacks, and its Carbon/Carbon.h would shadow the
+# real framework header for the macOS core (osdlib_macosx.cpp includes it).
+settings:
+  base:
+    HEADER_SEARCH_PATHS:
+      - $(MAME_DIR)/src
+      - $(MAME_DIR)/src/osd
+      - $(MAME_DIR)/src/emu
+      - $(MAME_DIR)/src/frontend/mame
+      - $(MAME_DIR)/src/devices
+      - $(MAME_DIR)/src/lib
+      - $(MAME_DIR)/src/lib/util
+      - $(MAME_DIR)/src/mame
+      - $(MAME_DIR)/src/mame/shared
+      - $(MAME_DIR)/src/lib/netlist
+      - $(MAME_DIR)/src/osd/modules/file
+      - $(MAME_DIR)/src/osd/modules/render
+      - $(MAME_DIR)/3rdparty
+      - $(MAME_DIR)/3rdparty/asio/include
+      - $(MAME_DIR)/3rdparty/asmjit
+      - $(MAME_DIR)/3rdparty/bgfx/include
+      - $(MAME_DIR)/3rdparty/bgfx/3rdparty
+      - $(MAME_DIR)/3rdparty/bgfx/3rdparty/khronos
+      - $(MAME_DIR)/3rdparty/bimg/include
+      - $(MAME_DIR)/3rdparty/bx/include
+      - $(MAME_DIR)/3rdparty/bx/include/compat/osx
+      - $(MAME_DIR)/3rdparty/expat/lib
+      - $(MAME_DIR)/3rdparty/flac/include
+      - $(MAME_DIR)/3rdparty/flac/src/libFLAC/include
+      - $(MAME_DIR)/3rdparty/glm
+      - $(MAME_DIR)/3rdparty/libjpeg
+      - $(MAME_DIR)/3rdparty/linenoise
+      - $(MAME_DIR)/3rdparty/lua/src
+      - $(MAME_DIR)/3rdparty/portmidi/pm_common
+      - $(MAME_DIR)/3rdparty/portmidi/porttime
+      - $(MAME_DIR)/3rdparty/pugixml/src
+      - $(MAME_DIR)/3rdparty/rapidjson/include
+      - $(MAME_DIR)/3rdparty/softfloat3/source
+      - $(MAME_DIR)/3rdparty/softfloat3/source/include
+      - $(MAME_DIR)/3rdparty/softfloat3/source/8086
+      - $(MAME_DIR)/3rdparty/softfloat3/bochs_ext
+      - $(MAME_DIR)/3rdparty/softfloat3/build/MAME
+      - $(MAME_DIR)/3rdparty/sol2
+      - $(MAME_DIR)/3rdparty/sqlite3
+      - $(MAME_DIR)/3rdparty/utf8proc
+      - $(MAME_DIR)/3rdparty/zlib
+      - $(MAME_DIR)/3rdparty/zstd/lib
+      - $(MAME_DIR)/build/generated
+      - $(MAME_DIR)/build/generated/emu
+      - $(MAME_DIR)/build/generated/emu/layout
+      - $(MAME_DIR)/build/generated/mame
+      - $(MAME_DIR)/build/generated/mame/layout
 settingGroups:
   mame-base:
     base:
@@ -17,55 +72,6 @@ settingGroups:
       ONLY_ACTIVE_ARCH: NO
       GCC_OPTIMIZATION_LEVEL: s
       SWIFT_VERSION: "5.0"
-      HEADER_SEARCH_PATHS:
-        - $(MAME_DIR)/src
-        - $(MAME_DIR)/src/osd
-        - $(MAME_DIR)/src/emu
-        - $(MAME_DIR)/src/frontend/mame
-        - $(MAME_DIR)/src/devices
-        - $(MAME_DIR)/src/lib
-        - $(MAME_DIR)/src/lib/util
-        - $(MAME_DIR)/src/mame
-        - $(MAME_DIR)/src/mame/shared
-        - $(MAME_DIR)/src/lib/netlist
-        - $(MAME_DIR)/src/osd/modules/file
-        - $(MAME_DIR)/src/osd/modules/render
-        - $(MAME_DIR)/3rdparty
-        - $(MAME_DIR)/3rdparty/asio/include
-        - $(MAME_DIR)/3rdparty/asmjit
-        - $(MAME_DIR)/3rdparty/bgfx/include
-        - $(MAME_DIR)/3rdparty/bgfx/3rdparty
-        - $(MAME_DIR)/3rdparty/bgfx/3rdparty/khronos
-        - $(MAME_DIR)/3rdparty/bimg/include
-        - $(MAME_DIR)/3rdparty/bx/include
-        - $(MAME_DIR)/3rdparty/bx/include/compat/osx
-        - $(MAME_DIR)/3rdparty/expat/lib
-        - $(MAME_DIR)/3rdparty/flac/include
-        - $(MAME_DIR)/3rdparty/flac/src/libFLAC/include
-        - $(MAME_DIR)/3rdparty/glm
-        - $(MAME_DIR)/3rdparty/libjpeg
-        - $(MAME_DIR)/3rdparty/linenoise
-        - $(MAME_DIR)/3rdparty/lua/src
-        - $(MAME_DIR)/3rdparty/portmidi/pm_common
-        - $(MAME_DIR)/3rdparty/portmidi/porttime
-        - $(MAME_DIR)/3rdparty/pugixml/src
-        - $(MAME_DIR)/3rdparty/rapidjson/include
-        - $(MAME_DIR)/3rdparty/softfloat3/source
-        - $(MAME_DIR)/3rdparty/softfloat3/source/include
-        - $(MAME_DIR)/3rdparty/softfloat3/source/8086
-        - $(MAME_DIR)/3rdparty/softfloat3/bochs_ext
-        - $(MAME_DIR)/3rdparty/softfloat3/build/MAME
-        - $(MAME_DIR)/3rdparty/sol2
-        - $(MAME_DIR)/3rdparty/sqlite3
-        - $(MAME_DIR)/3rdparty/utf8proc
-        - $(MAME_DIR)/3rdparty/zlib
-        - $(MAME_DIR)/3rdparty/zstd/lib
-        - $(SRCROOT)/Core/ios_compat
-        - $(MAME_DIR)/build/generated
-        - $(MAME_DIR)/build/generated/emu
-        - $(MAME_DIR)/build/generated/emu/layout
-        - $(MAME_DIR)/build/generated/mame
-        - $(MAME_DIR)/build/generated/mame/layout
       GCC_PREPROCESSOR_DEFINITIONS:
         - NDEBUG
         - CRLF=2
@@ -144,13 +150,28 @@ settingGroups:
     release:
       base:
         GCC_OPTIMIZATION_LEVEL: s
+  # Per-platform deltas over mame-base. Keep both groups to settings only that
+  # genuinely differ, so the core stays one behaviour surface.
+  mame-ios:
+    base:
+      HEADER_SEARCH_PATHS:
+        - $(inherited)
+        - $(SRCROOT)/Core/ios_compat
+  mame-mac:
+    base:
+      OTHER_LDFLAGS:
+        - -lc++
+        - -framework Carbon
+        - -framework CoreAudio
+        - -framework CoreFoundation
+        - -framework CoreMIDI
 targets:
   DataRoverCore:
     type: library.static
     platform: iOS
     deploymentTarget: "26.0"
     settings:
-      groups: [mame-base]
+      groups: [mame-base, mame-ios]
       base:
         PRODUCT_NAME: DataRoverCore
         SKIP_INSTALL: YES
@@ -171,6 +192,35 @@ targets:
     # MAME sources are injected by scripts/inject_mame_sources.py (xcodegen
     # has no file-list include; generated project.yml fragment is merged here).
     # Run `python3 scripts/inject_mame_sources.py` after `xcodegen generate`.
+  DataRoverCoreMac:
+    type: library.static
+    platform: macOS
+    deploymentTarget: "26.0"
+    settings:
+      groups: [mame-base, mame-mac]
+      base:
+        PRODUCT_NAME: DataRoverCoreMac
+        SKIP_INSTALL: YES
+        SUPPORTED_PLATFORMS: macosx
+        GCC_C_LANGUAGE_STANDARD: gnu17
+        CLANG_ENABLE_MODULES: NO
+        CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF: NO
+        GCC_WARN_UNUSED_FUNCTION: NO
+        GCC_WARN_64_TO_32_BIT_CONVERSION: NO
+        CLANG_CXX_LIBRARY: libc++
+        MACOSX_DEPLOYMENT_TARGET: "26.0"
+    sources:
+      - path: Core/datarover_osd.cpp
+      - path: Core/file-list.txt
+        buildPhase: none
+      - path: Core/gen_sources.py
+        buildPhase: none
+    # Same injection contract as DataRoverCore: inject_mame_sources.py fills
+    # this target's Sources phase, minus Core/datarover_carboncore_stubs.cpp
+    # (its Pasteboard/kUTType definitions collide with the real Carbon
+    # symbols this platform links against) and without the ios_compat header
+    # path that would shadow the framework's Carbon/Carbon.h. The per-file
+    # COMPILER_FLAGS are identical to the iOS core's.
   DataRover:
     type: application
     platform: iOS

@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Regenerate the iOS per-library compile map from the MAME fork.
+"""Regenerate the per-library compile map from the MAME fork.
 
-`inject_mame_sources.py` replays each source file's owning GENie library
-defines/includes into the Xcode project. Those live in the fork's generated
-makefiles, which GENie itself writes:
+The map is platform-neutral: `inject_mame_sources.py` replays each source
+file's owning GENie library defines/includes into both core targets (iOS and
+macOS). Those live in the fork's generated makefiles, which GENie itself
+writes:
 
     $(MAME_DIR)/build/projects/sdl3/mamedatarover/gmake-osx-clang/*.make
 
 so the map is reproducible from a fresh clone:
 
-    python3 scripts/gen_ios_libmap.py --mame-dir ../../../mame
+    python3 scripts/gen_mame_libmap.py --mame-dir ../../../mame
 
 `inject_mame_sources.py` calls this automatically when the map is absent.
 

@@ -4,23 +4,31 @@ re-apply the project's documented post-generation fix.
 
 Both passes run after `xcodegen generate` and both are idempotent:
 
-1. Inject the DataRoverCore target's MAME sources (Core/file-list.txt,
-   MAME_DIR-relative) as explicit PBXBuildFile/PBXFileReference entries with
-   $(MAME_DIR) paths — xcodegen has no file-list include mechanism. Sources
-   already present are skipped.
-2. Strip the -ObjC flag xcodegen appends to the DataRover app target's
-   OTHER_LDFLAGS because that target links a static-library target; xcodegen
-   re-adds it on every generate, and the committed pbxproj must stay the
-   pipeline output with this one documented exception (see project.yml).
+1. Inject the core targets' MAME sources (Core/file-list.txt, MAME_DIR-
+   relative) as explicit PBXBuildFile/PBXFileReference entries with
+   $(MAME_DIR) paths — xcodegen has no file-list include mechanism. Every
+   Sources phase that compiles Core/datarover_osd.cpp is a core target and is
+   filled; sources already present are skipped, generated build-file UUIDs are
+   namespaced per target, and Core/datarover_carboncore_stubs.cpp is left out
+   of every target that is not DataRoverCore (it stands in for the Carbon
+   symbols the macOS core links against for real).
 
 Per-file COMPILER_FLAGS carry each owning GENie lib's local defines/includes
 (mirroring build/projects/sdl3/mamedatarover/gmake-osx-clang/*.make) so the
-global target settings stay shadowing-safe:
+global target settings stay shadowing-safe, and they are identical for both
+core targets so the core stays one behaviour surface:
 - HAVE_CONFIG_H + FLAC include dirs live ONLY on flac/ entries (a global
   <config.h> would resolve to src/emu/config.h for every other C TU).
 - asmjit/ entries get -include $(SRCROOT)/Core/datarover_asmjit_ios.h
   (upstream gates sys_icache_invalidate's header on TARGET_OS_OSX).
-- ocore/osd entries drop the SDL OSD defines (headless: no SDL on iOS).
+- ocore/osd entries drop the SDL OSD defines (headless: no SDL).
+
+2. Strip the -ObjC flag xcodegen appends to the DataRover app target's
+OTHER_LDFLAGS because that target links a static-library target; xcodegen
+re-adds it on every generate, and the committed pbxproj must stay the
+pipeline output with this one documented exception (see project.yml).
+
+The per-lib compile map comes from gen_mame_libmap.py.
 
 Usage: python3 scripts/inject_mame_sources.py [--project DIR] [--libmap PATH]
 """
@@ -36,7 +44,23 @@ DEFAULT_PROJ = os.path.normpath(os.path.join(HERE, "..", "DataRover.xcodeproj"))
 LIBMAP = "/tmp/ios_libmap.json"
 
 sys.path.insert(0, HERE)
-import gen_ios_libmap  # noqa: E402  (sibling script, same directory)
+import gen_mame_libmap  # noqa: E402  (sibling script, same directory)
+
+# TUs that build only against the iOS core. datarover_carboncore_stubs.cpp
+# defines the Pasteboard*/kUTType* symbols iOS lacks; those definitions
+# collide with the real Carbon ones the macOS core links, so the file joins
+# every core target's Sources phase except DataRoverCore's.
+IOS_ONLY = {"Core/datarover_carboncore_stubs.cpp"}
+
+# The one place the two cores cannot share a compiler mode: on macOS,
+# 3rdparty/bgfx/src/renderer_vk.cpp imports <Cocoa/Cocoa.h> and friends under
+# BX_PLATFORM_OSX, which only compiles as Objective-C++. Upstream compiles the
+# whole bgfx project that way for targetos macosx (scripts/src/3rdparty.lua,
+# project "bgfx"); GENie cannot scope a buildoption per file, we can, so this
+# is the only per-file flag that differs between the cores (it changes the
+# language mode, not the -D set: the compiled configuration is identical).
+MAC_TARGETS = {"DataRoverCoreMac"}
+OBJCPP_ON_MAC = {"3rdparty/bgfx/src/renderer_vk.cpp"}
 
 
 def uuid_for(key):
@@ -88,8 +112,8 @@ def load_libmap(path, mame_dir):
     except FileNotFoundError:
         pass
     print(f"{path} missing; regenerating from {mame_dir} "
-          f"(gen_ios_libmap.py)", file=sys.stderr)
-    data = gen_ios_libmap.generate(mame_dir)
+          f"(gen_mame_libmap.py)", file=sys.stderr)
+    data = gen_mame_libmap.generate(mame_dir)
     with open(path, "w") as f:
         json.dump(data, f, indent=1, sort_keys=True)
     return data
@@ -135,8 +159,8 @@ def main():
             if s.startswith("3rdparty/portmidi/"):
                 lib = "portmidi"
             elif s.startswith("Core/"):
-                # Local iOS sources/snapshots: base flags suffice (they
-                # include MAME headers via the global HEADER_SEARCH_PATHS).
+                # Local sources/snapshots: base flags suffice (they include
+                # MAME headers via the global HEADER_SEARCH_PATHS).
                 return ""
             else:
                 return ""
@@ -191,31 +215,66 @@ def main():
         return s if s.startswith("Core/") else f"$(MAME_DIR)/{s}"
     ftype = {"cpp": "sourcecode.cpp.cpp", "c": "sourcecode.c.c",
              "mm": "sourcecode.cpp.objcpp", "m": "sourcecode.c.objc"}
-    build_lines, ref_lines, phase_lines = [], [], []
-    for s in missing:
-        u1, u2 = uuid_for("build:" + s), uuid_for("ref:" + s)
-        flags = flags_for(s)
-        if flags == "SKIP":
-            continue
-        entry = (f"\t\t{u1} = {{isa = PBXBuildFile; fileRef = {u2} "
-                 f"/* {proj_path(s)} */; settings = {{COMPILER_FLAGS = \"{flags}\"; }}; }};\n")
-        build_lines.append(entry)
-        ref_lines.append(
-            f"\t\t{u2} = {{isa = PBXFileReference; explicitFileType = {ftype[s.rsplit('.', 1)[-1]]}; "
-            f"path = \"{proj_path(s)}\"; sourceTree = SOURCE_ROOT; }};\n")
-        phase_lines.append(f"\t\t\t\t{u1} /* {proj_path(s)} in Sources */,\n")
+
+    # The core targets' Sources phases are the ones compiling
+    # datarover_osd.cpp; the phase's owning PBXNativeTarget names the target
+    # whose per-target exclusions apply.
+    owner_pat = re.compile(
+        r"[A-F0-9]{24} /\* (\w+) \*/ = \{\s*isa = PBXNativeTarget;.*?"
+        r"buildPhases = \((.*?)\);", re.S)
+    phase_owner = {}
+    for tm in owner_pat.finditer(text):
+        for pid in re.findall(r"([A-F0-9]{24}) /\*", tm.group(2)):
+            phase_owner[pid] = tm.group(1)
+    phase_pat = re.compile(
+        r"([A-F0-9]{24}) /\* Sources \*/ = \{\s*isa = PBXSourcesBuildPhase;"
+        r".*?files = \((.*?)\);", re.S)
+    phases = [mm for mm in phase_pat.finditer(text)
+              if "datarover_osd.cpp" in mm.group(2)]
+    if not phases:
+        print("no core sources phase found (nothing compiles "
+              "datarover_osd.cpp)", file=sys.stderr)
+        return 1
+
+    build_lines, ref_lines, refs, spliced = [], [], set(), []
+    for mm in phases:
+        target = phase_owner.get(mm.group(1))
+        if target is None:
+            print(f"sources phase {mm.group(1)} belongs to no PBXNativeTarget",
+                  file=sys.stderr)
+            return 1
+        added, phase_lines = [], []
+        for s in missing:
+            if target != "DataRoverCore" and s in IOS_ONLY:
+                continue
+            flags = flags_for(s)
+            if target in MAC_TARGETS and s in OBJCPP_ON_MAC:
+                # Non-ARC, like every other ObjC file here and like GENie's
+                # macOS build of bgfx (its ALL_OBJCPPFLAGS carry no -fobjc-arc);
+                # ARC rejects the manual (NSWindow*)(void*) bridge in this file.
+                flags = f"-x objective-c++ -fno-objc-arc {flags}".strip()
+            if flags == "SKIP":
+                continue
+            u1, u2 = uuid_for(f"{target}:build:{s}"), uuid_for("ref:" + s)
+            build_lines.append(
+                f"\t\t{u1} = {{isa = PBXBuildFile; fileRef = {u2} "
+                f"/* {proj_path(s)} */; settings = {{COMPILER_FLAGS = \"{flags}\"; }}; }};\n")
+            if u2 not in refs:
+                refs.add(u2)
+                ref_lines.append(
+                    f"\t\t{u2} = {{isa = PBXFileReference; explicitFileType = "
+                    f"{ftype[s.rsplit('.', 1)[-1]]}; path = \"{proj_path(s)}\"; "
+                    f"sourceTree = SOURCE_ROOT; }};\n")
+            phase_lines.append(f"\t\t\t\t{u1} /* {proj_path(s)} in Sources */,\n")
+            added.append(s)
+        spliced.append((mm, target, added, "".join(phase_lines)))
+    # Splice back-to-front so the offsets of the earlier phases stay valid.
+    for mm, _target, _added, lines in reversed(spliced):
+        text = text[:mm.start(2)] + mm.group(2) + lines + text[mm.end(2):]
     text = text.replace("/* End PBXBuildFile section */",
                         "".join(build_lines) + "/* End PBXBuildFile section */", 1)
     text = text.replace("/* End PBXFileReference section */",
                         "".join(ref_lines) + "/* End PBXFileReference section */", 1)
-    pat = re.compile(r"isa = PBXSourcesBuildPhase;.*?files = \((.*?)\);", re.S)
-    matches = list(pat.finditer(text))
-    idx = next((i for i, mm in enumerate(matches) if "datarover_osd.cpp" in mm.group(1)), None)
-    if idx is None:
-        print("DataRoverCore sources phase not found", file=sys.stderr)
-        return 1
-    mm = matches[idx]
-    text = text[:mm.start(1)] + mm.group(1) + "".join(phase_lines) + text[mm.end(1):]
 
     # Project-local Core/ refs stay project-relative
     # (path "Core/..." + sourceTree=SOURCE_ROOT): group-relative paths
@@ -232,7 +291,8 @@ def main():
     text, stripped = strip_objc_flag(text)
     with open(pbxproj, "w") as f:
         f.write(text)
-    print(f"injected {len(missing)} sources into {pbxproj}")
+    for _mm, target, added, _lines in spliced:
+        print(f"injected {len(added)} sources into {target}")
     if stripped:
         print(f'stripped "-ObjC" from {stripped} OTHER_LDFLAGS block(s)'
               f" in {pbxproj}")
