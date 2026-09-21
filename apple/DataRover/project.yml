@@ -186,13 +186,14 @@ targets:
         SWIFT_VERSION: "5.0"
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
         SUPPORTED_PLATFORMS: iphoneos iphonesimulator
-        # xcodegen appends "-ObjC" to OTHER_LDFLAGS whenever a target links a
-        # static-library target (here DataRoverCore). That force-loads every
-        # Objective-C class in the MAME archive (the bgfx .mm files), which
-        # this headless app never uses, so the entry is deleted by hand from
-        # the generated pbxproj after every `xcodegen generate`. Commit
-        # 3594f42 removed it deliberately; it cannot be suppressed from here
-        # because xcodegen re-adds it next to this list.
+        # xcodegen appends -ObjC to OTHER_LDFLAGS for a target that links a
+        # static-library target (here DataRoverCore) and re-adds it on every
+        # `xcodegen generate`, so scripts/inject_mame_sources.py strips it
+        # again. The DataRoverCore archive implements no Objective-C classes
+        # (its only .mm files, bgfx glcontext_eagl/renderer_mtl, are ObjC++
+        # without @implementation), so the flag is inert either way; it is
+        # kept out because commit 3594f42 removed it deliberately and the
+        # committed file must stay the pipeline output.
         OTHER_LDFLAGS:
           - -lc++
           - "-framework CoreMIDI"

@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""Inject MAME file-list sources into the xcodegen-generated pbxproj.
+"""Inject MAME file-list sources into the xcodegen-generated pbxproj, then
+re-apply the project's documented post-generation fix.
 
-xcodegen has no file-list include mechanism, so the DataRoverCore target's
-MAME sources (Core/file-list.txt, MAME_DIR-relative) are added here as
-explicit PBXBuildFile/PBXFileReference entries with $(MAME_DIR) paths.
-Idempotent: skips sources already present. Run after `xcodegen generate`.
+Both passes run after `xcodegen generate` and both are idempotent:
+
+1. Inject the DataRoverCore target's MAME sources (Core/file-list.txt,
+   MAME_DIR-relative) as explicit PBXBuildFile/PBXFileReference entries with
+   $(MAME_DIR) paths — xcodegen has no file-list include mechanism. Sources
+   already present are skipped.
+2. Strip the -ObjC flag xcodegen appends to the DataRover app target's
+   OTHER_LDFLAGS because that target links a static-library target; xcodegen
+   re-adds it on every generate, and the committed pbxproj must stay the
+   pipeline output with this one documented exception (see project.yml).
 
 Per-file COMPILER_FLAGS carry each owning GENie lib's local defines/includes
 (mirroring build/projects/sdl3/mamedatarover/gmake-osx-clang/*.make) so the
@@ -48,6 +55,31 @@ def default_mame_dir(project):
                                          "..", "..", "..", "mame"))
 
 
+# Post-generation fix: xcodegen appends -ObjC to OTHER_LDFLAGS for a target
+# that links a static-library target (here DataRoverCore) and re-adds it on
+# every `xcodegen generate`. The app target's block is the one carrying its
+# -lc++ link flag. Commit 3594f42 removed the flag deliberately.
+OBJC_LDFLAGS = re.compile(r"OTHER_LDFLAGS = \((.*?)\);", re.S)
+OBJC_FLAG_LINE = re.compile(r'^[ \t]*"-ObjC",\n', re.M)
+
+
+def strip_objc_flag(text):
+    """Delete xcodegen's auto -ObjC from the app target's OTHER_LDFLAGS.
+
+    Pure: returns (text, blocks_stripped) and leaves writing to the caller.
+    """
+    stripped = []
+
+    def fix(m):
+        block = m.group(1)
+        if '"-lc++"' in block and OBJC_FLAG_LINE.search(block):
+            stripped.append(block)
+            return f"OTHER_LDFLAGS = ({OBJC_FLAG_LINE.sub('', block)});"
+        return m.group(0)
+
+    return OBJC_LDFLAGS.sub(fix, text), len(stripped)
+
+
 def load_libmap(path, mame_dir):
     """Read the per-lib map, regenerating it from the fork when missing."""
     try:
@@ -82,6 +114,14 @@ def main():
     missing = [s for s in srcs if s not in have]
     print(f"{len(srcs)} in file-list, {len(have)} already in pbxproj, {len(missing)} to add")
     if not missing:
+        # Nothing to inject; still re-apply the post-generation fix, so the
+        # tree is only left alone when it already matches the committed file.
+        text, stripped = strip_objc_flag(text)
+        if stripped:
+            with open(pbxproj, "w") as f:
+                f.write(text)
+            print(f'stripped "-ObjC" from {stripped} OTHER_LDFLAGS block(s)'
+                  f" in {pbxproj}")
         return 0
     m = load_libmap(args.libmap, mame_dir)
     owner, incs, defs = m["owner"], m["incs"], m["defs"]
@@ -189,9 +229,13 @@ def main():
             ('path = "generated/drivlist.cpp"', 'path = "Core/generated/drivlist.cpp"'),
             ('path = "generated/version.cpp"', 'path = "Core/generated/version.cpp"')]:
         text = text.replace(_bad, _good)
+    text, stripped = strip_objc_flag(text)
     with open(pbxproj, "w") as f:
         f.write(text)
     print(f"injected {len(missing)} sources into {pbxproj}")
+    if stripped:
+        print(f'stripped "-ObjC" from {stripped} OTHER_LDFLAGS block(s)'
+              f" in {pbxproj}")
     return 0
 
 
