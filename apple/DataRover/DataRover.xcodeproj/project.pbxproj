@@ -8,14 +8,22 @@
 
 /* Begin PBXBuildFile section */
 		125A548483B23D2C21232140 /* datarover_osd.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 582A90AE4A9730158392C3CA /* datarover_osd.cpp */; };
+		14793313068BC3BAD6F66F37 /* libDataRoverCoreMac.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A3537F8F028FE46E05DAB7F8 /* libDataRoverCoreMac.a */; };
 		164E0F182E4ABD4CD830BBDE /* TouchPenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3720013E7CCE7E08DE3D4A5 /* TouchPenView.swift */; };
+		4C9621F7DF61AE1D5AEA6EAE /* MetalFramebufferView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E938E9FF77E0B78C50B686C1 /* MetalFramebufferView.swift */; };
 		7F0FA2FFC5EACA4922517D5E /* TouchAcceptanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB36A0ED9A5A0AC05C545DE1 /* TouchAcceptanceTests.swift */; };
+		8E3CF307697999C12634788D /* PointerPenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20AC77EA75E79A34838B7072 /* PointerPenView.swift */; };
 		9211A6E280B29D522920978C /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0D2C3C19B76F877D3EE5983A /* AppIcon.icon */; };
+		92C4EDA337E6C70598035DC0 /* MacHostHooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D877E48387BFE01673BFF5F /* MacHostHooks.swift */; };
 		9615575F37698BB337E80CC4 /* DataRoverApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 806C760A231FE0E83341D282 /* DataRoverApp.swift */; };
+		9870653D27E597B2E6EE1397 /* DataRoverMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 016A9945141D375FE7BEC9AF /* DataRoverMacApp.swift */; };
+		A147B2C6D0EDD764B3D25516 /* DataRoverShell in Frameworks */ = {isa = PBXBuildFile; productRef = B7656D1EF109BC3C75A8C317 /* DataRoverShell */; };
 		A2D0EE5A8BF51A195EC3AE26 /* DataRoverShell in Frameworks */ = {isa = PBXBuildFile; productRef = B73AA46D9A4DBBD5BA924A5A /* DataRoverShell */; };
 		B3DFB543A0490452BA843015 /* EmulatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB2AF878D90BE903E7F6C09 /* EmulatorView.swift */; };
 		CE40315633AE2A76A1E02B15 /* datarover_osd.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 582A90AE4A9730158392C3CA /* datarover_osd.cpp */; };
 		D335BE329FA3B73954B91999 /* libDataRoverCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0FE6FDD04512377E3B1982CA /* libDataRoverCore.a */; };
+		D80FE0258695AEDE16D722FD /* SupportPaths+macOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E2394A8820EBE0CB221E582 /* SupportPaths+macOS.swift */; };
+		D8F17D4D2AF7D07D0D845FFE /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0D2C3C19B76F877D3EE5983A /* AppIcon.icon */; };
 		FA55147F048E1F4B60813E4D /* HostHooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C1286C1556F324347698C13 /* HostHooks.swift */; };
 		C8E73BF97FE71E803B27AEA3 = {isa = PBXBuildFile; fileRef = FD134266EEEE2604E0A2C6AB /* $(MAME_DIR)/3rdparty/asmjit/asmjit/arm/a64assembler.cpp */; settings = {COMPILER_FLAGS = "-include $(SRCROOT)/Core/datarover_asmjit_ios.h -DNDEBUG -DCRLF=2 -DLSB_FIRST -DFLAC__NO_DLL -DPUGIXML_HEADER_ONLY -DASMJIT_STATIC"; }; };
 		C29C9B7F3FC3C164B2CDEF39 = {isa = PBXBuildFile; fileRef = B2E3A05C82A18E46E76BDA6F /* $(MAME_DIR)/3rdparty/asmjit/asmjit/arm/a64builder.cpp */; settings = {COMPILER_FLAGS = "-include $(SRCROOT)/Core/datarover_asmjit_ios.h -DNDEBUG -DCRLF=2 -DLSB_FIRST -DFLAC__NO_DLL -DPUGIXML_HEADER_ONLY -DASMJIT_STATIC"; }; };
@@ -2344,6 +2352,13 @@
 			remoteGlobalIDString = 10884EFC86890E145E61C154;
 			remoteInfo = DataRoverCore;
 		};
+		1C90E3679890365C02122A9D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D65202A6F1FD92FD833931E9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C4F0D100CA001284D35B9916;
+			remoteInfo = DataRoverCoreMac;
+		};
 		7A97FD759606E7B70460C251 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D65202A6F1FD92FD833931E9 /* Project object */;
@@ -2354,18 +2369,26 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		016A9945141D375FE7BEC9AF /* DataRoverMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataRoverMacApp.swift; sourceTree = "<group>"; };
 		02594B66E450399E7F4A7267 /* DataRover.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DataRover.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0CB2AF878D90BE903E7F6C09 /* EmulatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorView.swift; sourceTree = "<group>"; };
 		0D2C3C19B76F877D3EE5983A /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		0FE6FDD04512377E3B1982CA /* libDataRoverCore.a */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = archive.ar; path = libDataRoverCore.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		1C1286C1556F324347698C13 /* HostHooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostHooks.swift; sourceTree = "<group>"; };
+		1E2394A8820EBE0CB221E582 /* SupportPaths+macOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupportPaths+macOS.swift"; sourceTree = "<group>"; };
+		20440FFAB01DD0B3AE66B2AC /* DataRover.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DataRover.entitlements; sourceTree = "<group>"; };
+		20AC77EA75E79A34838B7072 /* PointerPenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointerPenView.swift; sourceTree = "<group>"; };
 		582A90AE4A9730158392C3CA /* datarover_osd.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = datarover_osd.cpp; sourceTree = "<group>"; };
 		75BDA9507CFE43EDBFAF80AA /* DataRoverUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DataRoverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D415BE0CD45134B7C79E92D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7D877E48387BFE01673BFF5F /* MacHostHooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHostHooks.swift; sourceTree = "<group>"; };
 		806C760A231FE0E83341D282 /* DataRoverApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataRoverApp.swift; sourceTree = "<group>"; };
 		A3537F8F028FE46E05DAB7F8 /* libDataRoverCoreMac.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libDataRoverCoreMac.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		B339E9A65294058396491A85 /* DataRover.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DataRover.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB36A0ED9A5A0AC05C545DE1 /* TouchAcceptanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchAcceptanceTests.swift; sourceTree = "<group>"; };
 		E3720013E7CCE7E08DE3D4A5 /* TouchPenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchPenView.swift; sourceTree = "<group>"; };
 		E685F011CFEBA3BFF96E5D43 /* gen_sources.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = gen_sources.py; sourceTree = "<group>"; };
+		E938E9FF77E0B78C50B686C1 /* MetalFramebufferView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalFramebufferView.swift; sourceTree = "<group>"; };
 		EAC670B70017A9E2EC499E97 /* file-list.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "file-list.txt"; sourceTree = "<group>"; };
 		F7DEC0225F3B4414D17FB3FE /* DataRoverKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DataRoverKit; path = ../DataRoverKit; sourceTree = SOURCE_ROOT; };
 		FD134266EEEE2604E0A2C6AB = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; path = "$(MAME_DIR)/3rdparty/asmjit/asmjit/arm/a64assembler.cpp"; sourceTree = SOURCE_ROOT; };
@@ -3539,6 +3562,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D7F18958AD78B9CCA552E3DF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				14793313068BC3BAD6F66F37 /* libDataRoverCoreMac.a in Frameworks */,
+				A147B2C6D0EDD764B3D25516 /* DataRoverShell in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -3547,6 +3579,7 @@
 			children = (
 				39A2530A20A7EB4276924377 /* App */,
 				C7BCFFEF4C43048F40F13B11 /* Core */,
+				BD0FD52AFFF98D0960352BF8 /* Mac */,
 				8A36D2A8F379E9BF207BB39F /* Packages */,
 				3FA637FC188CD7F5D2F2F0FF /* UITests */,
 				1433760B165C9E6D217DDEB5 /* Products */,
@@ -3557,6 +3590,7 @@
 			isa = PBXGroup;
 			children = (
 				02594B66E450399E7F4A7267 /* DataRover.app */,
+				B339E9A65294058396491A85 /* DataRover.app */,
 				75BDA9507CFE43EDBFAF80AA /* DataRoverUITests.xctest */,
 				0FE6FDD04512377E3B1982CA /* libDataRoverCore.a */,
 				A3537F8F028FE46E05DAB7F8 /* libDataRoverCoreMac.a */,
@@ -3592,6 +3626,20 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		BD0FD52AFFF98D0960352BF8 /* Mac */ = {
+			isa = PBXGroup;
+			children = (
+				20440FFAB01DD0B3AE66B2AC /* DataRover.entitlements */,
+				016A9945141D375FE7BEC9AF /* DataRoverMacApp.swift */,
+				7D415BE0CD45134B7C79E92D /* Info.plist */,
+				7D877E48387BFE01673BFF5F /* MacHostHooks.swift */,
+				E938E9FF77E0B78C50B686C1 /* MetalFramebufferView.swift */,
+				20AC77EA75E79A34838B7072 /* PointerPenView.swift */,
+				1E2394A8820EBE0CB221E582 /* SupportPaths+macOS.swift */,
+			);
+			path = Mac;
+			sourceTree = "<group>";
+		};
 		C7BCFFEF4C43048F40F13B11 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -3621,6 +3669,27 @@
 			productName = DataRoverCore;
 			productReference = 0FE6FDD04512377E3B1982CA /* libDataRoverCore.a */;
 			productType = "com.apple.product-type.library.static";
+		};
+		5EEA0645FE274B04C797CDC4 /* DataRoverMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 12E989937B7F755657BF671E /* Build configuration list for PBXNativeTarget "DataRoverMac" */;
+			buildPhases = (
+				6B867A62ECE51688782E1D8F /* Sources */,
+				32A1448B22FCEB7638F2E6E2 /* Resources */,
+				D7F18958AD78B9CCA552E3DF /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				57CDEFFD625659564A0C2D0F /* PBXTargetDependency */,
+			);
+			name = DataRoverMac;
+			packageProductDependencies = (
+				B7656D1EF109BC3C75A8C317 /* DataRoverShell */,
+			);
+			productName = DataRoverMac;
+			productReference = B339E9A65294058396491A85 /* DataRover.app */;
+			productType = "com.apple.product-type.application";
 		};
 		A79E7FBC8FA8E9DB124D3758 /* DataRover */ = {
 			isa = PBXNativeTarget;
@@ -3687,6 +3756,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					5EEA0645FE274B04C797CDC4 = {
+						ProvisioningStyle = Automatic;
+					};
 					A79E7FBC8FA8E9DB124D3758 = {
 						ProvisioningStyle = Automatic;
 					};
@@ -3715,12 +3787,21 @@
 				A79E7FBC8FA8E9DB124D3758 /* DataRover */,
 				10884EFC86890E145E61C154 /* DataRoverCore */,
 				C4F0D100CA001284D35B9916 /* DataRoverCoreMac */,
+				5EEA0645FE274B04C797CDC4 /* DataRoverMac */,
 				C7CD36629607B0438B833C13 /* DataRoverUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		32A1448B22FCEB7638F2E6E2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D8F17D4D2AF7D07D0D845FFE /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4D01849476A22B2BA1228F01 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -3737,6 +3818,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				7F0FA2FFC5EACA4922517D5E /* TouchAcceptanceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6B867A62ECE51688782E1D8F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9870653D27E597B2E6EE1397 /* DataRoverMacApp.swift in Sources */,
+				92C4EDA337E6C70598035DC0 /* MacHostHooks.swift in Sources */,
+				4C9621F7DF61AE1D5AEA6EAE /* MetalFramebufferView.swift in Sources */,
+				8E3CF307697999C12634788D /* PointerPenView.swift in Sources */,
+				D80FE0258695AEDE16D722FD /* SupportPaths+macOS.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6092,6 +6185,11 @@
 			target = A79E7FBC8FA8E9DB124D3758 /* DataRover */;
 			targetProxy = 7A97FD759606E7B70460C251 /* PBXContainerItemProxy */;
 		};
+		57CDEFFD625659564A0C2D0F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C4F0D100CA001284D35B9916 /* DataRoverCoreMac */;
+			targetProxy = 1C90E3679890365C02122A9D /* PBXContainerItemProxy */;
+		};
 		A8006644D85137EF307395EB /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 10884EFC86890E145E61C154 /* DataRoverCore */;
@@ -6553,6 +6651,38 @@
 			};
 			name = Debug;
 		};
+		8B2BA44AA9C8CEB5B51EC230 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Mac/DataRover.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Mac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				OTHER_LDFLAGS = (
+					"-lc++",
+					"-framework",
+					Carbon,
+					"-framework",
+					CoreAudio,
+					"-framework",
+					CoreFoundation,
+					"-framework",
+					CoreMIDI,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover.mac;
+				PRODUCT_NAME = DataRover;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		8CEAD7273EA1DC2AADC17B52 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -6803,6 +6933,38 @@
 			};
 			name = Release;
 		};
+		DA8D206F11F19EFFB7C92643 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Mac/DataRover.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = Mac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				OTHER_LDFLAGS = (
+					"-lc++",
+					"-framework",
+					Carbon,
+					"-framework",
+					CoreAudio,
+					"-framework",
+					CoreFoundation,
+					"-framework",
+					CoreMIDI,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover.mac;
+				PRODUCT_NAME = DataRover;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
 		F5C2DA4262124575DAA18C4C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -6824,6 +6986,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		12E989937B7F755657BF671E /* Build configuration list for PBXNativeTarget "DataRoverMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA8D206F11F19EFFB7C92643 /* Debug */,
+				8B2BA44AA9C8CEB5B51EC230 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		287D23F058FE7159A0BAB090 /* Build configuration list for PBXNativeTarget "DataRoverUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -6880,6 +7051,10 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		B73AA46D9A4DBBD5BA924A5A /* DataRoverShell */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DataRoverShell;
+		};
+		B7656D1EF109BC3C75A8C317 /* DataRoverShell */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DataRoverShell;
 		};

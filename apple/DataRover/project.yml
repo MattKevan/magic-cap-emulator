@@ -221,6 +221,48 @@ targets:
     # symbols this platform links against) and without the ios_compat header
     # path that would shadow the framework's Carbon/Carbon.h. The per-file
     # COMPILER_FLAGS are identical to the iOS core's.
+  DataRoverMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "26.0"
+    # The product is DataRover.app while the target is DataRoverMac; without
+    # this the project's product reference (and the scheme's BuildableName)
+    # would name a DataRoverMac.app that never gets built.
+    productName: DataRover
+    settings:
+      base:
+        PRODUCT_NAME: DataRover
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.DataRover.mac
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Mac/DataRover.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        MACOSX_DEPLOYMENT_TARGET: "26.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        OTHER_LDFLAGS:
+          - -lc++
+          - -framework
+          - Carbon
+          - -framework
+          - CoreAudio
+          - -framework
+          - CoreFoundation
+          - -framework
+          - CoreMIDI
+        SWIFT_VERSION: "5.0"
+    sources:
+      - path: Mac
+      - path: App/AppIcon.icon
+    dependencies:
+      - target: DataRoverCoreMac
+      - package: DataRoverKit
+        product: DataRoverShell
+    info:
+      path: Mac/Info.plist
+      properties:
+        CFBundleDisplayName: DataRover
+        LSApplicationCategoryType: public.app-category.utilities
+        NSHighResolutionCapable: true
+        LSMinimumSystemVersion: "26.0"
   DataRover:
     type: application
     platform: iOS
@@ -288,3 +330,13 @@ schemes:
       config: Debug
     test:
       targets: [DataRoverUITests]
+  DataRoverMac:
+    build:
+      targets:
+        DataRoverMac: all
+        DataRoverCoreMac: all
+    run:
+      config: Debug
+      # xcodegen sorts the build targets, so without this the Run action would
+      # adopt the first one (the core library) instead of the app.
+      executable: DataRoverMac
