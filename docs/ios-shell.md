@@ -46,9 +46,10 @@ with three targets:
   so fork-only functions are ignored). The Swift layer never includes the fork
   header, so this check is what keeps the hand copy from drifting.
 - `DataRoverKit` — pure logic, no platform UI: guest screen geometry, ROM
-  storage and package staging, save-state decoding, the support-path layout,
-  and `ROMPin`, the pinned-image check the macOS launcher already performs.
-  `swift test` covers this target (18 tests in 6 suites).
+  storage and package staging, save-status decoding (`SaveState` maps the
+  core's `datarover_save_status` to idle/pending/saved/failed), the
+  support-path layout, and `ROMPin`, the pinned-image check the macOS launcher
+  already performs. `swift test` covers this target (18 tests in 6 suites).
 - `DataRoverShell` — the shared shell: the Swift spelling of the ABI
   (`CoreHandle`), the emulator session lifecycle (`EmulatorSession`,
   `HostHooks`), the Metal framebuffer presenter, the pen router, the SwiftUI
@@ -68,9 +69,10 @@ listed in `Core/file-list.txt` and strips the `-ObjC` that xcodegen auto-adds
 to the app target, so the committed file is exactly what the pipeline emits.
 
 Stage 1 moved these out of the app target (the right column is relative to
-`apple/DataRoverKit/`):
+`apple/DataRoverKit/`; the left column is the pre-stage-1 path, renamed to
+`apple/` by this stage's first commit):
 
-| Before (`ios/DataRover/App/`) | After |
+| Before (pre-stage-1 path) | After |
 |---|---|
 | `CoreBridge.h` | `Sources/CDataRoverABI/include/CoreBridge.h` |
 | `CoreBridge.swift` | `Sources/DataRoverShell/CoreHandle.swift` |
@@ -78,7 +80,7 @@ Stage 1 moved these out of the app target (the right column is relative to
 | the Metal coordinator inside `EmulatorView.swift` | `Sources/DataRoverShell/FramebufferPresenter.swift` |
 | the pen geometry and pen routing inside `TouchPenView.swift` | `Sources/DataRoverKit/GuestGeometry.swift`, `Sources/DataRoverShell/PenRouter.swift` |
 | the ROM store and package staging from `DataRoverApp.swift` | `Sources/DataRoverKit/ROMStore.swift`, `Sources/DataRoverKit/PackageStaging.swift` |
-| the session, save-state decoding and ABI wrappers from `CoreBridge.swift` | `Sources/DataRoverShell/EmulatorSession.swift`, `Sources/DataRoverKit/SaveState.swift` |
+| the session, save-status decoding and ABI wrappers from `CoreBridge.swift` | `Sources/DataRoverShell/EmulatorSession.swift`, `Sources/DataRoverKit/SaveState.swift` |
 | `Assets.xcassets` | `Sources/DataRoverShell/Resources/Assets.xcassets` |
 
 ## Clock investigation
@@ -101,23 +103,36 @@ the same Magic Cap screen. iPad / iOS 27 simulator orientation needs further val
 its captured surface appeared portrait and clipped. Guest-visible Option chords
 and sustained device temperature require a physical-device check.
 
-The app's acceptance command is `xcodebuild test -scheme DataRover`, run from
-`apple/DataRover`. `UITests/TouchAcceptanceTests.swift` presses the guest's
-touch-gated startup screen and then its three calibration targets, and checks
-that the guest repaints after each press; the guest only advances that flow
-when the pen lands where it is waiting, so reaching the workbench is the
-proof. It has two prerequisites:
+The app's acceptance command runs from `apple/DataRover` against a booted
+iPhone 17 Pro simulator:
 
-- Delete the app container's checkpoint first, or the guest restores into a
-  state that renders but ignores the pen:
+```sh
+cd apple/DataRover
+xcodegen generate && python3 scripts/inject_mame_sources.py
+DEV=<udid of the booted iPhone 17 Pro>
+rm -f "$(xcrun simctl get_app_container "$DEV" com.example.DataRover data)/Documents/cfg/session.sta"
+xcrun simctl bootstatus "$DEV" -b
+xcodebuild test -project DataRover.xcodeproj -scheme DataRover \
+  -destination "platform=iOS Simulator,name=iPhone 17 Pro"
+```
 
-  ```sh
-  rm -f "$(xcrun simctl get_app_container <udid> com.example.DataRover data)/Documents/cfg/session.sta"
-  ```
+`UITests/TouchAcceptanceTests.swift` presses the guest's touch-gated startup
+screen and then its three calibration targets, and checks that the guest
+repaints after each press; the guest only advances that flow when the pen
+lands where it is waiting, so reaching the workbench is the proof. Two
+prerequisites:
 
+- The checkpoint delete above is required, not optional: a restored checkpoint
+  leaves the guest rendering but ignoring the pen, so a second run without it
+  starts from the restored guest and fails.
 - The ROM fixture must be in the container at
   `Documents/roms/datarover840/magiccap-usa.image`. Without it the app shows
   its "Import ROM…" empty state and the test skips instead of failing.
+
+The pen press is geometry-independent, but the three calibration targets are
+fractions of the iPhone 17 Pro's 874×402 pt landscape window: the test skips
+the calibration phase on any other window size rather than claim a workbench
+arrival it did not verify.
 
 The fixture used for verification is
 `~/Library/Application Support/DataRover/roms/datarover840/magiccap-usa.image`,
@@ -129,11 +144,15 @@ Two defects in the emulated core surfaced while this layout was being
 verified. Neither is caused by the package extraction and neither is fixed
 here; both are core-side, not app- or package-side.
 
-- **Restart segfaults during soft reset.** Tapping Restart crashes inside
-  MAME's `sound_stream`/`dmadac` path while the machine resets. The ABI call
-  (`datarover_restart`) only sets a flag and wakes the worker, and the crash
-  log has no frame from the app or the package. No regression under `tests/`
-  drives a core restart, so nothing guards that path.
+- **Restart segfaults during soft reset.** Tapping Restart in the app crashes
+  inside MAME's `sound_stream`/`dmadac` path while the machine resets. The ABI
+  call (`datarover_restart`) only sets a flag and wakes the worker, and the
+  crash log has no frame from the app or the package. The fork's headless
+  controls regression does drive `datarover_restart`
+  (`src/libdatarover/tests/controls.cpp:30`) and passes, linked against the
+  app's own `libDataRoverCore.a` — `PASS controls, pause, checkpoint, restart,
+  resume and corrupt-save fallback` — so the crash is specific to the app's
+  configuration or state, and its cause is not yet explained.
 - **A saved checkpoint suppresses guest pen input.** With
   `Documents/cfg/session.sta` present the guest renders but ignores the pen:
   it restores into a state where the touch-gated startup and calibration
