@@ -18,3 +18,7 @@ scratch/
 .superpowers/
 build/
 *.app/
+# SwiftPM build output for the local DataRoverKit package.
+.build/
+# Xcode per-user state (absolute paths, machine-local).
+xcuserdata/
