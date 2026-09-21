@@ -143,11 +143,13 @@ subtarget that compiles the patched shell in.
 
 ## Run Magic Cap
 
-For interactive play, `tools/start_manual.sh` wraps everything below (views,
-persistent state in the assets tree, pointer alignment) — see its header for
-modes. Set `MAGIC_CAP_NVRAM` to an NVRAM root containing `datarover840/` when
-an interactive session should use a prepared state instead of the default
-manual state. The rest of this section documents the underlying invocation.
+For interactive play, the native macOS app is the default path
+([`apple-shell.md`](apple-shell.md)); `tools/start_manual.sh` wraps everything
+below for CLI sessions (views, persistent state in the assets tree, pointer
+alignment) — see its header for modes. Set `MAGIC_CAP_NVRAM` to an NVRAM root
+containing `datarover840/` when an interactive session should use a prepared
+state instead of the default manual state. The rest of this section documents
+the underlying invocation.
 
 The default power-on mode is Magic Cap and the default view is the handheld
 LCD:
@@ -360,7 +362,9 @@ All checks above except `menu_touch_regression.py` select MAME's SDL `dummy`
 video and audio drivers as well as disabling emulated video/audio output.
 They therefore run without creating a host GUI window. The touch check
 intentionally creates a real MAME window inside Xvfb to exercise the Tab menu;
-`tools/start_manual.sh` remains the normal interactive launcher.
+`tools/start_manual.sh` remains the CLI launcher — the SDL binary, for
+driver-level and regression work. The native macOS app is now the default
+interactive path for macOS users ([`apple-shell.md`](apple-shell.md)).
 
 The serial harness writes generated configuration and logs under
 `$MAGIC_CAP_ASSETS/runtime/serial-regression/`. Override its defaults with

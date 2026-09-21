@@ -6,8 +6,9 @@ workbench. Each implemented subsystem has an automated regression under
 The full regression list and expected checkpoints are in
 [`docs/mame-bringup.md`](docs/mame-bringup.md).
 
-The Apple apps share [`apple/DataRoverKit`](apple/DataRoverKit); stage 1
-(extraction) is complete, and the macOS target is stage 2.
+The Apple apps share [`apple/DataRoverKit`](apple/DataRoverKit); both the iOS
+and the macOS shell are built from [`apple/DataRover`](apple/DataRover), and
+the macOS app target (stage 2) is part of that project.
 
 ## What works
 

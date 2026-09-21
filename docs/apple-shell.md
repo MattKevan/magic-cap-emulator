@@ -1,6 +1,9 @@
-# iOS device shell
+# Apple device shells
 
-The landscape shell follows Figma frame 572:788 and uses its exported logo and
+Both Apple shells — the iOS app on an iPhone and the sandboxed native macOS
+app — are thin adapters over the shared `apple/DataRoverKit` package and are
+built from `apple/DataRover`. The iOS app's landscape shell follows Figma
+frame 572:788 and uses its exported logo and
 Option artwork. Hold either Option control while touching the guest screen;
 both controls feed the same emulated hardware input, with independent releases.
 The logo opens Save state, Restart, and Load package.
@@ -48,8 +51,9 @@ with three targets:
 - `DataRoverKit` — pure logic, no platform UI: guest screen geometry, ROM
   storage and package staging, save-status decoding (`SaveState` maps the
   core's `datarover_save_status` to idle/pending/saved/failed), the
-  support-path layout, and `ROMPin`, the pinned-image check the macOS launcher
-  already performs. `swift test` covers this target (18 tests in 6 suites).
+  support-path layout, and `ROMPin`, the pinned-image check the macOS app
+  performs on File ▸ Import ROM… (the retired launcher's contract). `swift
+  test` covers this target (18 tests in 6 suites).
 - `DataRoverShell` — the shared shell: the Swift spelling of the ABI
   (`CoreHandle`), the emulator session lifecycle (`EmulatorSession`,
   `HostHooks`), the Metal framebuffer presenter, the pen router, the SwiftUI
@@ -61,6 +65,81 @@ root), `EmulatorView.swift` and `TouchPenView.swift` (the `UIViewRepresentable`
 wrappers around the shared presenter and pen router), `HostHooks.swift` (the
 iOS background task that lets a checkpoint save finish), the app icon and
 `Info.plist`.
+
+## macOS app
+
+The macOS app target (`Mac/`, scheme `DataRoverMac`, product
+`DataRover.app`, bundle id `com.example.DataRover.mac`) is the same kind of
+adapter: `DataRoverMacApp.swift` (entry point, menu bar, settings scene,
+welcome state), `MetalFramebufferView.swift` and `PointerPenView.swift` (the
+`NSViewRepresentable` wrappers around the shared presenter and pen router),
+`MacHostHooks.swift` (`ProcessInfo.beginActivity` as the save assertion), and
+`SupportPaths+macOS.swift` (the sandboxed support root). It holds no
+emulation logic and imports everything else from the package.
+
+Build and run from the repo root:
+
+```sh
+tools/build_mac_swift_app.sh && open build/DataRover.app
+```
+
+The script builds the `DataRoverMac` scheme for
+`platform=macOS,arch=arm64` into `build/DerivedData`, stages the product at
+`build/DataRover.app` — the path the retired SDL launcher bundle used to
+occupy — and ad-hoc signs the staged copy (`codesign --force -s -`). In Xcode,
+open `apple/DataRover/DataRover.xcodeproj` and run the `DataRoverMac` scheme
+directly. `xcodegen generate && python3 scripts/inject_mame_sources.py`
+reproduces the committed project whenever `project.yml` changes.
+
+Beyond the package's Metal, AppKit and SwiftUI imports (which Swift
+autolinking covers without target flags), the only frameworks the target names
+explicitly are Carbon, CoreAudio, CoreFoundation and CoreMIDI.
+
+### State and the sandbox
+
+The app is sandboxed (`com.apple.security.app-sandbox`, plus
+`files.user-selected.read-write` for the open panels and
+`com.apple.security.network.client`), so its support root lives inside its
+container:
+
+```
+~/Library/Containers/com.example.DataRover.mac/Data/Library/Application Support/DataRover
+```
+
+It holds the same `roms/`, `nvram/`, `cfg/` and `packages/` layout the iOS app
+keeps under its container's `Documents`; Settings ▸ Support folder shows the
+path and reveals it in Finder. The retired unsandboxed bundle kept its state
+in `~/Library/Application Support/DataRover`, which a sandboxed process cannot
+see at all, so there is deliberately no migration: the first launch boots
+fresh and imports the ROM through File ▸ Import ROM…. The old tree is left
+untouched.
+
+### Menus and the pen
+
+The File menu carries Import ROM…, Install Package… (⇧⌘I), Save State (⌘S) and
+Restart, and the View menu a Pause/Resume toggle; a Settings scene shows the
+support folder. The session items act on the running window through its
+focused value, so they stay disabled until a ROM is loaded and the emulator
+view exists. Import ROM… applies the same pinned-image check the retired
+launcher performed.
+
+The guest screen takes a pointer pen: mouse down/drag/up become pen events,
+and the Pen tracking view is flipped so the guest's top-down rows line up with
+the AppKit origin. The physical left and right ⌥ keys are the guest's two
+Option buttons — macOS reports them as separate key codes (58 left, 61 right),
+and a local `flagsChanged` monitor maps them onto the shared session's
+`option` calls.
+
+### Package installs on both platforms
+
+Both apps install a picked `.pkg` through the core's in-process PCLink
+channel: the shared `EmulatorSession.installPackage` stages the file and calls
+`datarover_install_package` in-process while the emulation worker keeps
+running. That is the only channel either app uses — iOS cannot create the
+desktop PTY slave, and the macOS app no longer depends on the retired
+launcher's PTY announcement/scraper. The guest speaks first, so the transfer
+starts when the user opens the Storeroom computer on the DataRover; the
+shared banner and sheet say so on both platforms.
 
 `DataRover.xcodeproj` is generated, not hand-maintained. From
 `apple/DataRover`, `xcodegen generate && python3 scripts/inject_mame_sources.py`
@@ -137,26 +216,31 @@ arrival it did not verify.
 The fixture used for verification is
 `~/Library/Application Support/DataRover/roms/datarover840/magiccap-usa.image`,
 SHA-256 `94785cb334f14eac00ed200af014c35972b4f25694103bc6a49b3afa280a6f1b`.
+The macOS app takes the same image, either through File ▸ Import ROM… or by
+copying it into the app container's `roms/datarover840/`.
 
 ## Known issues
 
-Two defects in the emulated core surfaced while this layout was being
+Two defects in the emulated core surfaced while these layouts were being
 verified. Neither is caused by the package extraction and neither is fixed
 here; both are core-side, not app- or package-side.
 
-- **Restart segfaults during soft reset.** Tapping Restart in the app crashes
-  inside MAME's `sound_stream`/`dmadac` path while the machine resets. The ABI
-  call (`datarover_restart`) only sets a flag and wakes the worker, and the
-  crash log has no frame from the app or the package. The fork's headless
-  controls regression does drive `datarover_restart`
+- **Restart segfaults during soft reset.** Choosing Restart in a shell — the
+  iOS logo menu or the macOS File menu — crashes inside MAME's
+  `sound_stream`/`dmadac` path while the machine resets. The ABI call
+  (`datarover_restart`) only sets a flag and wakes the worker, and the crash
+  log has no frame from the app or the package. The fork's headless controls
+  regression does drive `datarover_restart`
   (`src/libdatarover/tests/controls.cpp:30`) and passes, linked against the
   app's own `libDataRoverCore.a` — `PASS controls, pause, checkpoint, restart,
   resume and corrupt-save fallback` — so the crash is specific to the app's
-  configuration or state, and its cause is not yet explained.
-- **A saved checkpoint suppresses guest pen input.** With
-  `Documents/cfg/session.sta` present the guest renders but ignores the pen:
-  it restores into a state where the touch-gated startup and calibration
-  screens never run. A checkpoint is written on every pause/background entry
-  and every 60 seconds while running, so a normal session leaves one behind —
-  this is why the acceptance command above deletes it first. Removing the file
-  restores pen input.
+  configuration or state, not to either platform, and its cause is not yet
+  explained.
+- **A saved checkpoint suppresses guest pen input.** With a `cfg/session.sta`
+  checkpoint present in the app's support root, the guest renders but ignores
+  the pen: it restores into a state where the touch-gated startup and
+  calibration screens never run. A checkpoint is written on every
+  pause/background entry and every 60 seconds while running, so a normal
+  session leaves one behind — this is why the iOS acceptance command above
+  deletes `Documents/cfg/session.sta` first. Removing the file restores pen
+  input.
