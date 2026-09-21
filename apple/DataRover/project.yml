@@ -209,6 +209,19 @@ targets:
       - target: DataRoverCore
       - package: DataRoverKit
         product: DataRoverShell
+  DataRoverUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "26.0"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.DataRover.uitests
+        TEST_TARGET_NAME: DataRover
+        GENERATE_INFOPLIST_FILE: YES
+    sources:
+      - path: UITests
+    dependencies:
+      - target: DataRover
 schemes:
   DataRoverCore:
     build:
@@ -223,3 +236,5 @@ schemes:
         DataRoverCore: all
     run:
       config: Debug
+    test:
+      targets: [DataRoverUITests]
