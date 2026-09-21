@@ -155,6 +155,11 @@ struct EmulatorWindowView: View {
         }
         .focusedSceneValue(\.emulatorMenu,
                            EmulatorMenuContext(session: session, paused: $paused))
+        // The scene is `.windowResizability(.contentSize)`, so the content has
+        // to state a floor: the device shell is a GeometryReader and would
+        // otherwise offer the window no size to open at. This is the width the
+        // 480x320 guest screen reaches 1:1 inside the rails.
+        .frame(minWidth: 720, minHeight: 460)
         .onChange(of: showControls) { _, _ in updatePause() }
         .onChange(of: paused) { _, _ in updatePause() }
         .onChange(of: installPackageRequest) { _, requested in
