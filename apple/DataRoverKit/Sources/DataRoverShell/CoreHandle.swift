@@ -4,6 +4,7 @@
 // bridging header); these wrappers are the Swift-side spelling of it, so
 // every call site goes through one place.
 import CDataRoverABI
+import DataRoverKit
 import Foundation
 
 /// Touch phase for the single-finger pen.
@@ -61,4 +62,35 @@ public func coreInstallPackage(_ handle: UnsafeMutableRawPointer, data: Data, fi
 /// Progress of an install running on another thread: 0-100, or -1 when none.
 public func coreInstallProgress(_ handle: UnsafeMutableRawPointer) -> Int {
     Int(datarover_install_progress(handle))
+}
+
+/// Option input; the core applies it on its worker.
+public func coreSetOption(_ handle: UnsafeMutableRawPointer, side: Int, pressed: Bool) {
+    datarover_set_option(handle, Int32(side), pressed ? 1 : 0)
+}
+
+/// Pause or resume the emulation worker.
+public func coreSetPaused(_ handle: UnsafeMutableRawPointer, paused: Bool) {
+    datarover_set_paused(handle, paused ? 1 : 0)
+}
+
+/// Ask the core to checkpoint its state. Poll with `coreSaveStatus`.
+public func coreRequestSave(_ handle: UnsafeMutableRawPointer) {
+    datarover_request_save(handle)
+}
+
+/// Status of the last checkpoint request, as the ABI's 0/1/2/-1 contract.
+public func coreSaveStatus(_ handle: UnsafeMutableRawPointer) -> SaveState {
+    SaveState.decode(Int32(datarover_save_status(handle)))
+}
+
+/// Reboot the guest in place.
+public func coreRestart(_ handle: UnsafeMutableRawPointer) {
+    datarover_restart(handle)
+}
+
+/// Counter the core bumps per rendered guest frame; the presenter skips a
+/// draw whose revision it has already shown.
+public func coreFrameRevision(_ handle: UnsafeMutableRawPointer) -> UInt64 {
+    datarover_frame_revision(handle)
 }

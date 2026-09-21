@@ -43,6 +43,19 @@ import Testing
         try? FileManager.default.removeItem(at: root)
     }
 
+    @Test func rejectsAFileThatFailsThePinCheck() throws {
+        let root = try makeRoot()
+        let paths = SupportPaths(root: root)
+        let store = ROMStore(paths: paths)
+        let src = root.appendingPathComponent("bogus.image")
+        try Data("not the pinned image".utf8).write(to: src)
+        store.importROM(src, verifyPin: true)
+        #expect(store.romURL == nil)
+        #expect(store.lastImportError != nil)
+        #expect(FileManager.default.fileExists(atPath: paths.canonicalROM.path) == false)
+        try? FileManager.default.removeItem(at: root)
+    }
+
     @Test func reportsAMissingSource() throws {
         let root = try makeRoot()
         let store = ROMStore(paths: SupportPaths(root: root))

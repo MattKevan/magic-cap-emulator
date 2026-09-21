@@ -16,7 +16,6 @@
 // The core free-runs its own emulation thread (datarover_create boots
 // running_machine::run() on a worker); the view's draw loop only drives the
 // blit, never frame advance.
-import CDataRoverABI
 import MetalKit
 import DataRoverKit
 
@@ -123,7 +122,7 @@ public final class FramebufferPresenter: NSObject, MTKViewDelegate {
               let queue = queue else { return }
         // The core returns nil when emulation has stopped.
         guard session.alive else { return }
-        let revision = datarover_frame_revision(sessionHandle)
+        let revision = coreFrameRevision(sessionHandle)
         guard revision != lastRevision else { return }
         let (bytes, size) = coreFramebuffer(of: sessionHandle)
         guard let bytes, size == 480 * 320 / 4,

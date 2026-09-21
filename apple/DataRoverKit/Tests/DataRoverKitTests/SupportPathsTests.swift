@@ -16,8 +16,9 @@ import Testing
         let paths = SupportPaths(root: root)
         try paths.createDirectories()
         try paths.createDirectories()
-        #expect(FileManager.default.fileExists(atPath: paths.nvram.path))
-        #expect(FileManager.default.fileExists(atPath: paths.packages.path))
+        for dir in [paths.roms, paths.nvram, paths.cfg, paths.packages] {
+            #expect(FileManager.default.fileExists(atPath: dir.path))
+        }
         try? FileManager.default.removeItem(at: root)
     }
 }

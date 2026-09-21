@@ -11,7 +11,9 @@ import Testing
         let pinned = URL(fileURLWithPath: NSHomeDirectory())
             .appendingPathComponent("Library/Application Support/DataRover/roms/datarover840/magiccap-usa.image")
         guard FileManager.default.fileExists(atPath: pinned.path) else {
-            Issue.record("ROM fixture missing; skipped")
+            // Prerequisite: the MagicCap-USA.image fixture in the app's support
+            // directory. A machine that has never run the app lacks it, so skip
+            // rather than fail the suite.
             return
         }
         #expect(ROMPin.verify(pinned))

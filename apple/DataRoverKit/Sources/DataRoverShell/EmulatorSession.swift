@@ -3,7 +3,6 @@
 // The session owns the core handle and is a nil-handle state machine: it
 // starts on a detached task (booting), and a nil handle means the ROM could
 // not boot, so the UI shows an empty state instead of a white screen.
-import CDataRoverABI
 import DataRoverKit
 import Foundation
 
@@ -35,7 +34,7 @@ public final class EmulatorSession: ObservableObject {
                 self.alive = handle != nil
                 self.bootError = handle == nil ? "Could not start this ROM. Check that it is a DataRover 840 image." : nil
                 self.booting = false
-                if let handle { datarover_set_paused(handle, self.isPaused ? 1 : 0) }
+                if let handle { coreSetPaused(handle, paused: self.isPaused) }
             }
         }
     }
@@ -48,7 +47,7 @@ public final class EmulatorSession: ObservableObject {
 
     public func option(_ side: Int, pressed: Bool) {
         guard let handle, !isPaused else { return }
-        datarover_set_option(handle, Int32(side), pressed ? 1 : 0)
+        coreSetOption(handle, side: side, pressed: pressed)
     }
 
     public func setForeground(_ active: Bool) {
@@ -72,12 +71,12 @@ public final class EmulatorSession: ObservableObject {
         let paused = !foreground || menuVisible
         guard paused != isPaused else { return }
         isPaused = paused
-        if let handle { datarover_set_paused(handle, paused ? 1 : 0) }
+        if let handle { coreSetPaused(handle, paused: paused) }
     }
 
     public func saveNow() {
         guard let handle else { return }
-        datarover_request_save(handle)
+        coreRequestSave(handle)
         pollSave()
     }
 
@@ -90,9 +89,9 @@ public final class EmulatorSession: ObservableObject {
             }
             for _ in 0..<50 {
                 guard let self, let handle = self.handle else { return }
-                switch datarover_save_status(handle) {
-                case 2: self.saveMessage = "State saved"; return
-                case -1: self.saveMessage = "Could not save state. Check available storage."; return
+                switch coreSaveStatus(handle) {
+                case .saved: self.saveMessage = "State saved"; return
+                case .failed: self.saveMessage = "Could not save state. Check available storage."; return
                 default: break
                 }
                 try? await Task.sleep(nanoseconds: 100_000_000)
@@ -103,8 +102,8 @@ public final class EmulatorSession: ObservableObject {
 
     public func restart() {
         guard let handle else { return }
-        datarover_request_save(handle)
-        datarover_restart(handle)
+        coreRequestSave(handle)
+        coreRestart(handle)
     }
 
     /// Keep a copy of the picked package in the support directory, then
