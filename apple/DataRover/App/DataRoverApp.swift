@@ -1,11 +1,6 @@
-// DataRoverApp.swift — app entry: WindowGroup + toolbar + ROM/package import.
-//
-// Wiring: nvram/cfg/roms/packages directories resolve inside the app
-// container. The session boots lazily on first ROM (imported or restored);
-// EmulatorSession is a nil-handle state machine (noROM -> ready) so the
-// UI shows an empty state instead of a white screen before import.
-// ROM/package import uses fileImporter with security-scoped copy into
-// the container (start -> copy -> stop pairing per Apple docs).
+// DataRoverApp.swift — iOS entry: platform root, ROM import, device shell.
+import DataRoverKit
+import DataRoverShell
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -14,59 +9,22 @@ extension UTType {
     static let magicCapImage = UTType(filenameExtension: "image", conformingTo: .data)!
 }
 
-final class ROMStore: ObservableObject {
-    @Published var romURL: URL?
-    @Published var lastImportError: String?
-    let romsDir: URL
-
-    init() {
-        let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        romsDir = base.appendingPathComponent("roms", isDirectory: true)
-        try? FileManager.default.createDirectory(at: romsDir, withIntermediateDirectories: true)
-        // Restore: prefer the exact image layout, fall back to any image/zip.
-        let fm = FileManager.default
-        let exact = romsDir.appendingPathComponent("datarover840/magiccap-usa.image")
-        if fm.fileExists(atPath: exact.path) {
-            romURL = exact
-        } else if let found = ((try? fm.contentsOfDirectory(at: romsDir, includingPropertiesForKeys: nil)) ?? []).first(where: {
-            ["image", "zip", "pkg"].contains($0.pathExtension.lowercased())
-        }) {
-            romURL = found
-        }
-    }
-
-    func importROM(_ url: URL) {
-        guard url.startAccessingSecurityScopedResource() else {
-            lastImportError = "Could not access the picked file."
-            return
-        }
-        defer { url.stopAccessingSecurityScopedResource() }
-        do {
-            let destDir = romsDir.appendingPathComponent("datarover840", isDirectory: true)
-            try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
-            let dest = destDir.appendingPathComponent("magiccap-usa.image")
-            if FileManager.default.fileExists(atPath: dest.path) {
-                try FileManager.default.removeItem(at: dest)
-            }
-            try FileManager.default.copyItem(at: url, to: dest)
-            romURL = dest
-            lastImportError = nil
-        } catch {
-            lastImportError = error.localizedDescription
-        }
-    }
+/// iOS keeps the app container's Documents directory as its support root.
+func iOSSupportPaths() -> SupportPaths {
+    let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    return SupportPaths(root: base)
 }
 
 @main
 struct DataRoverApp: App {
-    @StateObject private var romStore = ROMStore()
+    @StateObject private var romStore = ROMStore(paths: iOSSupportPaths())
     @State private var showImporter = false
 
     var body: some Scene {
         WindowGroup {
             Group {
                 if let romURL = romStore.romURL {
-                    EmulatorContainerView(romURL: romURL)
+                    EmulatorContainerView(romURL: romURL, paths: romStore.paths)
                 } else {
                     VStack(spacing: 16) {
                         Text("DataRover").font(.largeTitle)
@@ -93,14 +51,17 @@ struct EmulatorContainerView: View {
     @State private var showControls = false
     @State private var showPackageImporter = false
     @State private var importMessage: String?
+    private let paths: SupportPaths
 
-    init(romURL: URL) {
-        let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let nvram = base.appendingPathComponent("nvram").path
-        let cfg = base.appendingPathComponent("cfg").path
-        try? FileManager.default.createDirectory(atPath: nvram, withIntermediateDirectories: true)
-        try? FileManager.default.createDirectory(atPath: cfg, withIntermediateDirectories: true)
-        _session = StateObject(wrappedValue: EmulatorSession(nvramDir: nvram, cfgDir: cfg, romPath: romURL.path))
+    init(romURL: URL, paths: SupportPaths) {
+        self.paths = paths
+        try? paths.createDirectories()
+        _session = StateObject(wrappedValue: EmulatorSession(
+            nvramDir: paths.nvram.path,
+            cfgDir: paths.cfg.path,
+            packagesDir: paths.packages.path,
+            romPath: romURL.path,
+            hooks: iOSHostHooks()))
     }
 
     private func requestLandscape() {
@@ -110,20 +71,9 @@ struct EmulatorContainerView: View {
 
     var body: some View {
         DeviceShellView(session: session, openMenu: { showControls = true }) {
-            ZStack {
-                Color.black
-                if session.booting {
-                    ProgressView("Starting DataRover…").tint(.white).foregroundStyle(.white)
-                } else if let error = session.bootError {
-                    Text(error).foregroundStyle(.white).padding()
-                } else {
-                    EmulatorView(session: session)
-                    TouchPenView(session: session)
-                }
-                if session.installing || !session.packageMessage.isEmpty {
-                    InstallStatusBanner(session: session)
-                }
-            }
+            EmulatorBody(session: session,
+                         framebuffer: { MetalFramebufferView(session: session) },
+                         overlay: { TouchPenView(session: session) })
         }
         .onAppear {
             session.setForeground(scenePhase == .active)
@@ -136,7 +86,8 @@ struct EmulatorContainerView: View {
         .onChange(of: showControls) { visible in session.setMenuVisible(visible) }
         .sheet(isPresented: $showControls) {
             EmulatorControlsSheet(session: session, loadPackage: { showPackageImporter = true })
-                .fileImporter(isPresented: $showPackageImporter, allowedContentTypes: [.magicCapPackage, .zip, .data]) { result in
+                .fileImporter(isPresented: $showPackageImporter,
+                              allowedContentTypes: [.magicCapPackage, .zip, .data]) { result in
                     do {
                         let url = try result.get()
                         // The guest paces the transfer, so it must be running:
@@ -145,50 +96,10 @@ struct EmulatorContainerView: View {
                         session.installPackage(url)
                     } catch { importMessage = error.localizedDescription }
                 }
-                .alert("Package", isPresented: Binding(get: { importMessage != nil }, set: { if !$0 { importMessage = nil } })) {
+                .alert("Package", isPresented: Binding(get: { importMessage != nil },
+                                                       set: { if !$0 { importMessage = nil } })) {
                     Button("OK") { importMessage = nil }
                 } message: { Text(importMessage ?? "") }
         }
-    }
-}
-
-/// Install progress and result, overlaid on the guest screen. Tap to dismiss
-/// a finished message.
-struct InstallStatusBanner: View {
-    @ObservedObject var session: EmulatorSession
-
-    var body: some View {
-        VStack(spacing: 10) {
-            if session.installing {
-                ProgressView(value: session.installProgress >= 0 ? Double(session.installProgress) / 100 : nil)
-                    .progressViewStyle(.linear)
-                    .frame(width: 240)
-            }
-            Text(session.packageMessage)
-                .font(.footnote)
-                .multilineTextAlignment(.center)
-        }
-        .padding(14)
-        .background(.black.opacity(0.78), in: RoundedRectangle(cornerRadius: 14))
-        .foregroundStyle(.white)
-        .padding()
-        .onTapGesture { if !session.installing { session.clearPackageMessage() } }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-enum PackageImport {
-    static func store(_ url: URL) throws -> URL {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let dir = base.appendingPathComponent("packages", isDirectory: true)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        var dest = dir.appendingPathComponent(url.lastPathComponent)
-        if FileManager.default.fileExists(atPath: dest.path) {
-            dest = dir.appendingPathComponent(UUID().uuidString + "-" + url.lastPathComponent)
-        }
-        try FileManager.default.copyItem(at: url, to: dest)
-        return dest
     }
 }

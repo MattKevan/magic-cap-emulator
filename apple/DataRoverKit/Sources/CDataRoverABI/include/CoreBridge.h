@@ -1,10 +1,12 @@
-// CoreBridge.h — Swift bridging header: nullability-annotated redeclaration
-// of the 9-function libdatarover C ABI.
+// CoreBridge.h — nullability-annotated redeclaration of the libdatarover C
+// ABI, exposed as the `CDataRoverABI` Swift module.
 //
 // Fork source of truth: <mame>/src/libdatarover/datarover_core.h (ABI names
-// verbatim here). The app target never includes the fork header (no MAME
-// header search paths on this target); symbols resolve at link time from
-// libDataRoverCore.a.
+// verbatim here). The fork declares 17 functions; this redeclaration has the
+// 16 the host apps call — `datarover_emulated_seconds` is deliberately
+// omitted, since nothing uses it. No target includes the fork header (it has
+// no MAME header search paths); symbols resolve at link time from
+// libDataRoverCore.a, which the app targets link.
 //
 // Nullability mirrors the header contract: the framebuffer pointer may be
 // NULL (pre-boot / non-RAM-backed mapping — null-check before blit) and

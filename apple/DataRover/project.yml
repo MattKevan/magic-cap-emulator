@@ -4,6 +4,9 @@ options:
   deploymentTarget:
     iOS: "26.0"
   xcodeVersion: "1600"
+packages:
+  DataRoverKit:
+    path: ../DataRoverKit
 settingGroups:
   mame-base:
     base:
@@ -182,7 +185,6 @@ targets:
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_FILE: App/Info.plist
-        SWIFT_OBJC_BRIDGING_HEADER: App/CoreBridge.h
         SWIFT_VERSION: "5.0"
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
         SUPPORTED_PLATFORMS: iphoneos iphonesimulator
@@ -198,17 +200,15 @@ targets:
           - -lc++
           - "-framework CoreMIDI"
     sources:
-      - path: App/Assets.xcassets
       - path: App/AppIcon.icon
       - path: App/DataRoverApp.swift
-      - path: App/CoreBridge.swift
       - path: App/EmulatorView.swift
       - path: App/TouchPenView.swift
-      - path: App/ToolbarView.swift
-      - path: App/CoreBridge.h
-        buildPhase: none
+      - path: App/HostHooks.swift
     dependencies:
       - target: DataRoverCore
+      - package: DataRoverKit
+        product: DataRoverShell
 schemes:
   DataRoverCore:
     build:

@@ -8,14 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		164E0F182E4ABD4CD830BBDE /* TouchPenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3720013E7CCE7E08DE3D4A5 /* TouchPenView.swift */; };
-		413C79122FC8207B61AFAAF4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9AD9A72BD8FD43AF00A6489 /* Assets.xcassets */; };
 		9211A6E280B29D522920978C /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0D2C3C19B76F877D3EE5983A /* AppIcon.icon */; };
 		9615575F37698BB337E80CC4 /* DataRoverApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 806C760A231FE0E83341D282 /* DataRoverApp.swift */; };
-		9C7F7A7A99E5D8B3D4371193 /* CoreBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8848998300E797BE583737 /* CoreBridge.swift */; };
+		A2D0EE5A8BF51A195EC3AE26 /* DataRoverShell in Frameworks */ = {isa = PBXBuildFile; productRef = B73AA46D9A4DBBD5BA924A5A /* DataRoverShell */; };
 		B3DFB543A0490452BA843015 /* EmulatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CB2AF878D90BE903E7F6C09 /* EmulatorView.swift */; };
 		CE40315633AE2A76A1E02B15 /* datarover_osd.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 582A90AE4A9730158392C3CA /* datarover_osd.cpp */; };
 		D335BE329FA3B73954B91999 /* libDataRoverCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0FE6FDD04512377E3B1982CA /* libDataRoverCore.a */; };
-		D9951532B2330A949B1D46E8 /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BCA90DAF1655912D96EE1CF /* ToolbarView.swift */; };
+		FA55147F048E1F4B60813E4D /* HostHooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C1286C1556F324347698C13 /* HostHooks.swift */; };
 		672E02A52ED07812601C0CE5 = {isa = PBXBuildFile; fileRef = FD134266EEEE2604E0A2C6AB /* $(MAME_DIR)/3rdparty/asmjit/asmjit/arm/a64assembler.cpp */; settings = {COMPILER_FLAGS = "-include $(SRCROOT)/Core/datarover_asmjit_ios.h -DNDEBUG -DCRLF=2 -DLSB_FIRST -DFLAC__NO_DLL -DPUGIXML_HEADER_ONLY -DASMJIT_STATIC"; }; };
 		A9AD29FFF8F92B3150767202 = {isa = PBXBuildFile; fileRef = B2E3A05C82A18E46E76BDA6F /* $(MAME_DIR)/3rdparty/asmjit/asmjit/arm/a64builder.cpp */; settings = {COMPILER_FLAGS = "-include $(SRCROOT)/Core/datarover_asmjit_ios.h -DNDEBUG -DCRLF=2 -DLSB_FIRST -DFLAC__NO_DLL -DPUGIXML_HEADER_ONLY -DASMJIT_STATIC"; }; };
 		51CEBA59D5CF46934B997CDD = {isa = PBXBuildFile; fileRef = CDC3A46D9C91126F29F1C57C /* $(MAME_DIR)/3rdparty/asmjit/asmjit/arm/a64compiler.cpp */; settings = {COMPILER_FLAGS = "-include $(SRCROOT)/Core/datarover_asmjit_ios.h -DNDEBUG -DCRLF=2 -DLSB_FIRST -DFLAC__NO_DLL -DPUGIXML_HEADER_ONLY -DASMJIT_STATIC"; }; };
@@ -1192,15 +1191,13 @@
 		0CB2AF878D90BE903E7F6C09 /* EmulatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmulatorView.swift; sourceTree = "<group>"; };
 		0D2C3C19B76F877D3EE5983A /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		0FE6FDD04512377E3B1982CA /* libDataRoverCore.a */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = archive.ar; path = libDataRoverCore.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		1E8848998300E797BE583737 /* CoreBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreBridge.swift; sourceTree = "<group>"; };
-		4AC97F7CBDF106AD83A6D325 /* CoreBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreBridge.h; sourceTree = "<group>"; };
+		1C1286C1556F324347698C13 /* HostHooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostHooks.swift; sourceTree = "<group>"; };
 		582A90AE4A9730158392C3CA /* datarover_osd.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = datarover_osd.cpp; sourceTree = "<group>"; };
-		7BCA90DAF1655912D96EE1CF /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarView.swift; sourceTree = "<group>"; };
 		806C760A231FE0E83341D282 /* DataRoverApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataRoverApp.swift; sourceTree = "<group>"; };
-		A9AD9A72BD8FD43AF00A6489 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E3720013E7CCE7E08DE3D4A5 /* TouchPenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchPenView.swift; sourceTree = "<group>"; };
 		E685F011CFEBA3BFF96E5D43 /* gen_sources.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = gen_sources.py; sourceTree = "<group>"; };
 		EAC670B70017A9E2EC499E97 /* file-list.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "file-list.txt"; sourceTree = "<group>"; };
+		F7DEC0225F3B4414D17FB3FE /* DataRoverKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DataRoverKit; path = ../DataRoverKit; sourceTree = SOURCE_ROOT; };
 		FD134266EEEE2604E0A2C6AB = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; path = "$(MAME_DIR)/3rdparty/asmjit/asmjit/arm/a64assembler.cpp"; sourceTree = SOURCE_ROOT; };
 		B2E3A05C82A18E46E76BDA6F = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; path = "$(MAME_DIR)/3rdparty/asmjit/asmjit/arm/a64builder.cpp"; sourceTree = SOURCE_ROOT; };
 		CDC3A46D9C91126F29F1C57C = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; path = "$(MAME_DIR)/3rdparty/asmjit/asmjit/arm/a64compiler.cpp"; sourceTree = SOURCE_ROOT; };
@@ -2368,6 +2365,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D335BE329FA3B73954B91999 /* libDataRoverCore.a in Frameworks */,
+				A2D0EE5A8BF51A195EC3AE26 /* DataRoverShell in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2379,6 +2377,7 @@
 			children = (
 				39A2530A20A7EB4276924377 /* App */,
 				C7BCFFEF4C43048F40F13B11 /* Core */,
+				8A36D2A8F379E9BF207BB39F /* Packages */,
 				1433760B165C9E6D217DDEB5 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -2396,15 +2395,20 @@
 			isa = PBXGroup;
 			children = (
 				0D2C3C19B76F877D3EE5983A /* AppIcon.icon */,
-				A9AD9A72BD8FD43AF00A6489 /* Assets.xcassets */,
-				4AC97F7CBDF106AD83A6D325 /* CoreBridge.h */,
-				1E8848998300E797BE583737 /* CoreBridge.swift */,
 				806C760A231FE0E83341D282 /* DataRoverApp.swift */,
 				0CB2AF878D90BE903E7F6C09 /* EmulatorView.swift */,
-				7BCA90DAF1655912D96EE1CF /* ToolbarView.swift */,
+				1C1286C1556F324347698C13 /* HostHooks.swift */,
 				E3720013E7CCE7E08DE3D4A5 /* TouchPenView.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		8A36D2A8F379E9BF207BB39F /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				F7DEC0225F3B4414D17FB3FE /* DataRoverKit */,
+			);
+			name = Packages;
 			sourceTree = "<group>";
 		};
 		C7BCFFEF4C43048F40F13B11 /* Core */ = {
@@ -2452,6 +2456,7 @@
 			);
 			name = DataRover;
 			packageProductDependencies = (
+				B73AA46D9A4DBBD5BA924A5A /* DataRoverShell */,
 			);
 			productName = DataRover;
 			productReference = 02594B66E450399E7F4A7267 /* DataRover.app */;
@@ -2480,6 +2485,9 @@
 			);
 			mainGroup = 0880D146C99057BDBB900FB8;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7465467AEF8469F864D00956 /* XCLocalSwiftPackageReference "../DataRoverKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1433760B165C9E6D217DDEB5 /* Products */;
 			projectDirPath = "";
@@ -2497,7 +2505,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				9211A6E280B29D522920978C /* AppIcon.icon in Resources */,
-				413C79122FC8207B61AFAAF4 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3675,10 +3682,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9C7F7A7A99E5D8B3D4371193 /* CoreBridge.swift in Sources */,
 				9615575F37698BB337E80CC4 /* DataRoverApp.swift in Sources */,
 				B3DFB543A0490452BA843015 /* EmulatorView.swift in Sources */,
-				D9951532B2330A949B1D46E8 /* ToolbarView.swift in Sources */,
+				FA55147F048E1F4B60813E4D /* HostHooks.swift in Sources */,
 				164E0F182E4ABD4CD830BBDE /* TouchPenView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3713,7 +3719,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_OBJC_BRIDGING_HEADER = App/CoreBridge.h;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -4157,7 +4162,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SWIFT_OBJC_BRIDGING_HEADER = App/CoreBridge.h;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -4194,6 +4198,20 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		7465467AEF8469F864D00956 /* XCLocalSwiftPackageReference "../DataRoverKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../DataRoverKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B73AA46D9A4DBBD5BA924A5A /* DataRoverShell */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DataRoverShell;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D65202A6F1FD92FD833931E9 /* Project object */;
 }
