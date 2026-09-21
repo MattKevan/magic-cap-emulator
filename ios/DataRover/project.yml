@@ -175,6 +175,10 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.DataRover
+        # Icon Composer document (App/AppIcon.icon); the name must match the
+        # file, less extension. actool compiles it into the Liquid Glass icon
+        # set plus legacy raster fallbacks for iOS < 26.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_FILE: App/Info.plist
@@ -187,6 +191,7 @@ targets:
           - "-framework CoreMIDI"
     sources:
       - path: App/Assets.xcassets
+      - path: App/AppIcon.icon
       - path: App/DataRoverApp.swift
       - path: App/CoreBridge.swift
       - path: App/EmulatorView.swift
