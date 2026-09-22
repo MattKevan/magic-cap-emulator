@@ -98,6 +98,25 @@ Beyond the package's Metal, AppKit and SwiftUI imports (which Swift
 autolinking covers without target flags), the only frameworks the target names
 explicitly are Carbon, CoreAudio, CoreFoundation and CoreMIDI.
 
+### What has been verified on macOS
+
+Verified by running the app: it builds and links with no framework beyond that
+list, launches from both the Xcode product and the staged
+`build/DataRover.app`, stays alive, and quits cleanly; the staged copy keeps
+the hardened-runtime flag and the sandbox entitlements
+(`flags=0x10002(adhoc,runtime)`, three entitlement keys, and
+`codesign --verify --deep --strict` passes); and a booted core emulates — the
+container accumulates `nvram/`, `cfg/` and a `cfg/session.sta` checkpoint that
+grows while the app runs (measured at 177,632 bytes).
+
+Not verified on this machine: the guest's on-screen rendering, the pen path,
+the ⌥ Option mapping and the menu plumbing, because `screencapture` returns
+blank in the session where this was developed — control captures of unrelated
+windows came back fully transparent (`BGRA 0,0,0,0`) and a full-screen capture
+was uniform white, so the capture path, not the app, is what fails. A human at
+the keyboard should confirm those four, and the Known issues below are only
+observed on iOS until then.
+
 ### State and the sandbox
 
 The app is sandboxed (`com.apple.security.app-sandbox`, plus
@@ -228,8 +247,8 @@ Two defects in the emulated core surfaced while these layouts were being
 verified. Neither is caused by the package extraction and neither is fixed
 here; both are core-side, not app- or package-side.
 
-- **Restart segfaults during soft reset.** Choosing Restart in a shell — the
-  iOS logo menu or the macOS File menu — crashes inside MAME's
+- **Restart segfaults during soft reset.** Choosing Restart in the iOS logo
+  menu crashes inside MAME's
   `sound_stream`/`dmadac` path while the machine resets. The ABI call
   (`datarover_restart`) only sets a flag and wakes the worker, and the crash
   log has no frame from the app or the package. The fork's headless controls
@@ -237,8 +256,9 @@ here; both are core-side, not app- or package-side.
   (`src/libdatarover/tests/controls.cpp:30`) and passes, linked against the
   app's own `libDataRoverCore.a` — `PASS controls, pause, checkpoint, restart,
   resume and corrupt-save fallback` — so the crash is specific to the app's
-  configuration or state, not to either platform, and its cause is not yet
-  explained.
+  configuration or state, and its cause is not yet explained. The crash was
+  observed on iOS only: the macOS File-menu Restart path has not been
+  exercised (see the verification note below).
 - **A saved checkpoint suppresses guest pen input.** With a `cfg/session.sta`
   checkpoint present in the app's support root, the guest renders but ignores
   the pen: it restores into a state where the touch-gated startup and
