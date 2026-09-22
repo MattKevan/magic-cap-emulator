@@ -142,14 +142,23 @@ settingGroups:
         - SOFTFLOAT_FAST_DIV64TO32
         - SOFTFLOAT_FAST_INT64
         - SOFTFLOAT_ROUND_ODD
-    debug:
-      base:
-        GCC_OPTIMIZATION_LEVEL: "0"
-        GCC_PREPROCESSOR_DEFINITIONS:
-          - $(inherited)
-    release:
-      base:
-        GCC_OPTIMIZATION_LEVEL: s
+    # Two notes on per-configuration settings here.
+    #
+    # 1. A settingGroup's `debug:`/`release:` blocks CANNOT override a key its
+    #    own `base` block already sets: xcodegen applies `base` last, so such
+    #    an entry is silently inert (verified with a scratch project — with
+    #    both blocks setting ONLY_ACTIVE_ARCH, the resolved value was the base
+    #    one). Use `configs:` for overrides, as below.
+    # 2. Debug deliberately stays at the base's -Os: the emulation loop needs
+    #    the optimisation to hold real time under MAME throttling. Only the
+    #    architecture is narrowed, because each core is 1159 translation units
+    #    per architecture (1.3 GB of objects, 2.6 GB per fat archive) and
+    #    nothing local uses the x86_64 slice — the simulator on Apple Silicon
+    #    and the local macOS app are both arm64. Release keeps the base's
+    #    ONLY_ACTIVE_ARCH: NO, so a distributable build stays universal.
+    configs:
+      Debug:
+        ONLY_ACTIVE_ARCH: YES
   # Per-platform deltas over mame-base. Keep both groups to settings only that
   # genuinely differ, so the core stays one behaviour surface.
   mame-ios:

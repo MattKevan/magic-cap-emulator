@@ -6288,7 +6288,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MAME_DIR = "$(SRCROOT)/../../../mame";
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
 					"-lc++",
 					"-framework Carbon",
@@ -6422,7 +6422,7 @@
 					"@executable_path/Frameworks",
 				);
 				MAME_DIR = "$(SRCROOT)/../../../mame";
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRoverCore;
 				PRODUCT_NAME = DataRoverCore;
 				SDKROOT = iphoneos;
