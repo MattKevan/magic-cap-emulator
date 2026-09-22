@@ -87,7 +87,9 @@ The script builds the `DataRoverMac` scheme for
 `platform=macOS,arch=arm64` with the developer's default DerivedData, stages
 the product at
 `build/DataRover.app` — the path the retired SDL launcher bundle used to
-occupy — and ad-hoc signs the staged copy (`codesign --force -s -`). In Xcode,
+occupy. The staged copy keeps the signature the Xcode CodeSign step produced,
+so the hardened-runtime flag and the sandbox entitlements survive staging
+(`codesign -dv` reports `flags=0x10002(adhoc,runtime)`). In Xcode,
 open `apple/DataRover/DataRover.xcodeproj` and run the `DataRoverMac` scheme
 directly. `xcodegen generate && python3 scripts/inject_mame_sources.py`
 reproduces the committed project whenever `project.yml` changes.
