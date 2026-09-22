@@ -84,7 +84,8 @@ tools/build_mac_swift_app.sh && open build/DataRover.app
 ```
 
 The script builds the `DataRoverMac` scheme for
-`platform=macOS,arch=arm64` into `build/DerivedData`, stages the product at
+`platform=macOS,arch=arm64` with the developer's default DerivedData, stages
+the product at
 `build/DataRover.app` — the path the retired SDL launcher bundle used to
 occupy — and ad-hoc signs the staged copy (`codesign --force -s -`). In Xcode,
 open `apple/DataRover/DataRover.xcodeproj` and run the `DataRoverMac` scheme
