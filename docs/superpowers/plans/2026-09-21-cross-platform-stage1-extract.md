@@ -1117,14 +1117,16 @@ In the `DataRover` scheme entry add:
 `apple/DataRover/UITests/TouchAcceptanceTests.swift`:
 
 ```swift
-// Acceptance for the guest touch path: a synthetic tap must reach the guest
+// Acceptance for the guest touch path: a synthetic press must reach the guest
 // through TouchPenView -> PenRouter -> GuestGeometry -> corePen, and the
 // guest must repaint. Requires the ROM fixture in the app container; skips
-// (rather than fails) when the app shows its import empty state.
+// (rather than fails) when the app shows its import empty state. A restored
+// checkpoint also makes the guest ignore the pen (pre-existing core defect),
+// so delete cfg/session.sta in the app container before running.
 import XCTest
 
 final class TouchAcceptanceTests: XCTestCase {
-    func testTapReachesTheGuestAndRepaints() throws {
+    func testPressesReachTheGuestAndDriveCalibration() throws {
         let app = XCUIApplication()
         app.launch()
 
