@@ -83,9 +83,16 @@ Build and run from the repo root:
 tools/build_mac_swift_app.sh && open build/DataRover.app
 ```
 
-The script builds the `DataRoverMac` scheme for
-`platform=macOS,arch=arm64` with the developer's default DerivedData, stages
-the product at
+The project is Apple silicon only: `project.yml` sets `ARCHS: arm64` for every
+target in both configurations, so the iOS devices, the simulator that runs
+here and the macOS app all build exactly one architecture, and Release is
+arm64-only as well — `lipo -archs` on the Release app and core archive both
+report `arm64`. One exception worth knowing: project settings do not reach the
+SwiftPM package targets, so a Release build compiles their Swift sources for
+x86_64 as well unless the invocation passes `ONLY_ACTIVE_ARCH=YES`; Debug
+already narrows them. The script still passes `platform=macOS,arch=arm64` as
+belt-and-braces; it builds the `DataRoverMac` scheme with the developer's
+default DerivedData, stages the product at
 `build/DataRover.app` — the path the retired SDL launcher bundle used to
 occupy. The staged copy keeps the signature the Xcode CodeSign step produced,
 so the hardened-runtime flag and the sandbox entitlements survive staging

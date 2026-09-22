@@ -14,6 +14,13 @@ packages:
 # real framework header for the macOS core (osdlib_macosx.cpp includes it).
 settings:
   base:
+    # Apple silicon only. Both Apple apps and both cores are arm64-only: the
+    # host machine, the iOS simulator it runs, and the iOS devices are all
+    # arm64, and the Intel slice only ever doubled the compile for an
+    # architecture nothing here can run. Release keeps this value too (there
+    # is no $(ARCHS_STANDARD) left to widen it), so a distributable build is
+    # arm64-only as well.
+    ARCHS: arm64
     HEADER_SEARCH_PATHS:
       - $(MAME_DIR)/src
       - $(MAME_DIR)/src/osd
@@ -142,23 +149,17 @@ settingGroups:
         - SOFTFLOAT_FAST_DIV64TO32
         - SOFTFLOAT_FAST_INT64
         - SOFTFLOAT_ROUND_ODD
-    # Two notes on per-configuration settings here.
+    # Note for anyone adding a per-configuration setting here: a settingGroup's
+    # `debug:`/`release:` blocks CANNOT override a key its own `base` block
+    # already sets — xcodegen applies `base` last, so such an entry is silently
+    # inert (verified with a scratch project: with both blocks setting
+    # ONLY_ACTIVE_ARCH, the resolved value was the base one). Use `configs:`,
+    # as the DataRoverMac target does for ENABLE_DEBUG_DYLIB.
     #
-    # 1. A settingGroup's `debug:`/`release:` blocks CANNOT override a key its
-    #    own `base` block already sets: xcodegen applies `base` last, so such
-    #    an entry is silently inert (verified with a scratch project — with
-    #    both blocks setting ONLY_ACTIVE_ARCH, the resolved value was the base
-    #    one). Use `configs:` for overrides, as below.
-    # 2. Debug deliberately stays at the base's -Os: the emulation loop needs
-    #    the optimisation to hold real time under MAME throttling. Only the
-    #    architecture is narrowed, because each core is 1159 translation units
-    #    per architecture (1.3 GB of objects, 2.6 GB per fat archive) and
-    #    nothing local uses the x86_64 slice — the simulator on Apple Silicon
-    #    and the local macOS app are both arm64. Release keeps the base's
-    #    ONLY_ACTIVE_ARCH: NO, so a distributable build stays universal.
-    configs:
-      Debug:
-        ONLY_ACTIVE_ARCH: YES
+    # Debug intentionally keeps the base's -Os: the emulation loop needs the
+    # optimisation to hold real time under MAME throttling. There is no
+    # architecture left for ONLY_ACTIVE_ARCH to narrow here — the project is
+    # arm64-only (see the ARCHS note at the top of this file's settings).
   # Per-platform deltas over mame-base. Keep both groups to settings only that
   # genuinely differ, so the core stays one behaviour surface.
   mame-ios:
@@ -185,7 +186,6 @@ targets:
         PRODUCT_NAME: DataRoverCore
         SKIP_INSTALL: YES
         SUPPORTED_PLATFORMS: iphoneos iphonesimulator
-        ARCHS: $(ARCHS_STANDARD)
         GCC_C_LANGUAGE_STANDARD: gnu17
         CLANG_ENABLE_MODULES: NO
         CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF: NO
