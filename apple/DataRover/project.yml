@@ -73,6 +73,14 @@ settingGroups:
   mame-base:
     base:
       MAME_DIR: $(SRCROOT)/../../../mame
+      # Compile the cores through ccache (tools/ccache/{clang,clang++}). The
+      # wrappers fall back to the real compiler when ccache is not installed,
+      # so the build does not depend on it. 1159 translation units per
+      # platform are otherwise recompiled from scratch whenever the object
+      # cache is lost; the cache lives in ~/Library/Caches/ccache and is
+      # inspected with `ccache -s`.
+      CC: $(SRCROOT)/../../tools/ccache/clang
+      CXX: $(SRCROOT)/../../tools/ccache/clang++
       CLANG_CXX_LANGUAGE_STANDARD: c++20
       CLANG_CXX_LIBRARY: libc++
       IPHONEOS_DEPLOYMENT_TARGET: "26.0"

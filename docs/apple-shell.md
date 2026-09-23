@@ -105,6 +105,20 @@ Beyond the package's Metal, AppKit and SwiftUI imports (which Swift
 autolinking covers without target flags), the only frameworks the target names
 explicitly are Carbon, CoreAudio, CoreFoundation and CoreMIDI.
 
+### Build cache
+
+The cores compile through ccache. `project.yml`'s `mame-base` group sets
+`CC`/`CXX` to `tools/ccache/{clang,clang++}` — thin wrappers that hand the
+command to the real compiler through ccache when it is installed, and pass it
+straight through when it is not, so a checkout on a machine without ccache
+still builds. The cache lives in `~/Library/Caches/ccache` (30 GB cap, and
+sloppy about file mtimes and time macros because generated headers churn) and
+is inspected with `ccache -s`. Each core is 1159 translation units per
+platform, so a warm cache turns a from-scratch core rebuild into a short one;
+what it cannot rescue is a change to a compile flag — a deployment-target
+bump, a new `-D`, a different language standard — because those are cache
+misses by definition.
+
 ### What has been verified on macOS
 
 Verified by running the app: it builds and links with no framework beyond that

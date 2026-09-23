@@ -1,0 +1,12 @@
+#!/bin/sh
+# C++ compiler wrapper for the MAME cores — the C++ twin of tools/ccache/clang.
+#
+# Routes compilation through ccache when it is installed and straight to the
+# real compiler when it is not, so a checkout on a machine without ccache
+# still builds. Wired as CXX in project.yml's mame-base group; ccache passes
+# link commands through to the compiler untouched. See docs/apple-shell.md.
+set -e
+if command -v ccache >/dev/null 2>&1; then
+    exec ccache /usr/bin/clang++ "$@"
+fi
+exec /usr/bin/clang++ "$@"
