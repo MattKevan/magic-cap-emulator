@@ -194,6 +194,10 @@ targets:
         PRODUCT_NAME: DataRoverCore
         SKIP_INSTALL: YES
         SUPPORTED_PLATFORMS: iphoneos iphonesimulator
+        # The iOS guest CPU uses MAME's interpreter because App Store apps
+        # cannot rely on writable executable memory. Optimize that hot path
+        # for throughput rather than code size.
+        GCC_OPTIMIZATION_LEVEL: 3
         GCC_C_LANGUAGE_STANDARD: gnu17
         CLANG_ENABLE_MODULES: NO
         CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF: NO
