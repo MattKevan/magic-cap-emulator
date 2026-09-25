@@ -1084,6 +1084,7 @@ src/osd/modules/monitor/monitor_sdl.cpp
 src/osd/modules/monitor/monitor_win32.cpp
 src/osd/modules/netdev/netdev_common.cpp
 src/osd/modules/netdev/none.cpp
+src/osd/modules/netdev/slirp.cpp
 src/osd/modules/netdev/pcap.cpp
 src/osd/modules/netdev/taptun.cpp
 src/osd/modules/netdev/udp.cpp

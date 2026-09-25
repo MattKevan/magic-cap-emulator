@@ -6,6 +6,7 @@ public struct EmulatorControlsSheet: View {
     @ObservedObject private var session: EmulatorSession
     private let loadPackage: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("datarover.network.enabled") private var networkEnabled = false
 
     public init(session: EmulatorSession, loadPackage: @escaping () -> Void) {
         self.session = session
@@ -22,6 +23,17 @@ public struct EmulatorControlsSheet: View {
                         dismiss()
                     }
                     Button("Load package…", systemImage: "shippingbox") { loadPackage() }
+                }
+                Section {
+                    Toggle("Guest networking", isOn: $networkEnabled)
+                    Text("Enables the guest’s emulated Ethernet and an HTTPS proxy through the host. Takes effect the next time you launch DataRover.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    Text(session.networkMessage).font(.footnote).foregroundStyle(.secondary)
+                    if !session.audioMessage.isEmpty {
+                        Text(session.audioMessage).font(.footnote).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Bridges")
                 }
                 Section {
                     Text(session.saveMessage.isEmpty ? "State is saved automatically when you leave the app." : session.saveMessage)

@@ -2,9 +2,7 @@
 // ABI, exposed as the `CDataRoverABI` Swift module.
 //
 // Fork source of truth: <mame>/src/libdatarover/datarover_core.h (ABI names
-// verbatim here). The fork declares 17 functions; this redeclaration has the
-// 16 the host apps call — `datarover_emulated_seconds` is deliberately
-// omitted, since nothing uses it. No target includes the fork header (it has
+// verbatim here). No target includes the fork header (it has
 // no MAME header search paths); symbols resolve at link time from
 // libDataRoverCore.a, which the app targets link.
 //
@@ -21,11 +19,21 @@ NS_ASSUME_NONNULL_BEGIN
 #define DATAROVER_FB_HEIGHT 320
 #define DATAROVER_FB_SIZE (480 * 320 / 4)
 
+typedef struct datarover_create_options {
+    uint32_t struct_size;
+    int32_t network_enabled;
+    int32_t audio_output_enabled;
+} datarover_create_options;
+
 const uint8_t * _Nullable datarover_framebuffer_bytes(void * _Nullable machine);
 size_t datarover_framebuffer_size(void);
 void * _Nullable datarover_create(const char * _Nullable nvram_dir,
                                   const char * _Nullable cfg_dir,
                                   const char * _Nullable rom_path);
+void * _Nullable datarover_create_with_options(const char * _Nullable nvram_dir,
+                                                const char * _Nullable cfg_dir,
+                                                const char * _Nullable rom_path,
+                                                const datarover_create_options * _Nullable options);
 void datarover_destroy(void * _Nullable machine);
 void datarover_pen_down(void * _Nullable machine, int x, int y);
 void datarover_pen_move(void * _Nullable machine, int x, int y);
@@ -47,5 +55,11 @@ void datarover_request_save(void * _Nullable machine);
 int datarover_save_status(void * _Nullable machine);
 uint64_t datarover_frame_revision(void * _Nullable machine);
 void datarover_restart(void * _Nullable machine);
+// Nonblocking pull of mono signed PCM frames at 48 kHz.
+size_t datarover_audio_read(void * _Nullable machine, int16_t * _Nullable samples,
+                            size_t frame_capacity);
+void datarover_audio_clear(void * _Nullable machine);
+// 0: disabled, 1: provider initialized, -1: requested provider unavailable.
+int datarover_network_status(void * _Nullable machine);
 
 NS_ASSUME_NONNULL_END

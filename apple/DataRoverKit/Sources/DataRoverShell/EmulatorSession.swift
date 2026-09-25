@@ -17,26 +17,50 @@ public final class EmulatorSession: ObservableObject {
     @Published public private(set) var installing = false
     @Published public private(set) var installProgress = -1
     @Published public private(set) var packageMessage = ""
+    @Published public private(set) var networkMessage = "Network bridge off"
+    @Published public private(set) var audioMessage = ""
     /// Platform services the host supplies (see `HostHooks`).
     public let hooks: HostHooks
     private let packagesDir: String
     private var foreground = true
     private var menuVisible = false
+    private var proxy: HTTPSProxy?
+    private var audioOutput: HostAudioOutput?
+    private let networkEnabled: Bool
 
     public init(nvramDir: String, cfgDir: String, packagesDir: String, romPath: String, hooks: HostHooks) {
         self.packagesDir = packagesDir
         self.hooks = hooks
+        networkEnabled = UserDefaults.standard.bool(forKey: "datarover.network.enabled")
+        let requestedNetwork = networkEnabled
         Task.detached(priority: .userInitiated) { [weak self] in
-            let handle = coreCreate(nvram: nvramDir, cfg: cfgDir, rom: romPath)
+            let handle = coreCreate(nvram: nvramDir, cfg: cfgDir, rom: romPath, networkEnabled: requestedNetwork)
             await MainActor.run {
                 guard let self else { coreDestroy(handle); return }
                 self.handle = handle
                 self.alive = handle != nil
                 self.bootError = handle == nil ? "Could not start this ROM. Check that it is a DataRover 840 image." : nil
                 self.booting = false
-                if let handle { coreSetPaused(handle, paused: self.isPaused) }
+                if let handle {
+                    coreSetPaused(handle, paused: self.isPaused)
+                    self.startHostBridges(handle)
+                }
             }
         }
+    }
+
+    private func startHostBridges(_ handle: UnsafeMutableRawPointer) {
+        audioOutput = HostAudioOutput(handle: handle)
+        if !isPaused, audioOutput?.start() == false { audioMessage = "Speaker playback is unavailable" }
+        guard networkEnabled else { return }
+        switch coreNetworkStatus(handle) {
+        case 1: networkMessage = "Guest Ethernet ready; HTTPS proxy on port 8765"
+        case -1: networkMessage = "Guest networking could not start"
+        default: networkMessage = "Guest networking is starting"
+        }
+        let proxy = HTTPSProxy()
+        proxy.start()
+        self.proxy = proxy
     }
 
     /// A session for platforms that are never suspended mid-save.
@@ -72,6 +96,7 @@ public final class EmulatorSession: ObservableObject {
         guard paused != isPaused else { return }
         isPaused = paused
         if let handle { coreSetPaused(handle, paused: paused) }
+        if paused { audioOutput?.stop() } else if audioOutput?.start() == false { audioMessage = "Speaker playback is unavailable" }
     }
 
     public func saveNow() {
@@ -102,8 +127,10 @@ public final class EmulatorSession: ObservableObject {
 
     public func restart() {
         guard let handle else { return }
+        audioOutput?.stop()
         coreRequestSave(handle)
         coreRestart(handle)
+        if !isPaused, audioOutput?.start() == false { audioMessage = "Speaker playback is unavailable" }
     }
 
     /// Keep a copy of the picked package in the support directory, then
@@ -154,5 +181,9 @@ public final class EmulatorSession: ObservableObject {
         packageMessage = ""
     }
 
-    deinit { coreDestroy(handle) }
+    deinit {
+        proxy?.stop()
+        audioOutput?.stop()
+        coreDestroy(handle)
+    }
 }

@@ -97,6 +97,7 @@ settingGroups:
         - FORCE_DRC_C_BACKEND=1
         - DATAROVER_IOS_NO_JIT_FLUSH=1
         - SDLMAME_DARWIN
+        - OSD_NET_USE_SLIRP
         - USE_XINPUT=0
         - USE_XINPUT_WII_LIGHTGUN_HACK=0
         - USE_OPENGL=0
@@ -175,10 +176,27 @@ settingGroups:
       HEADER_SEARCH_PATHS:
         - $(inherited)
         - $(SRCROOT)/Core/ios_compat
+        - $(SRCROOT)/../../build/apple-network-deps/$(PLATFORM_NAME)/include
+      LIBRARY_SEARCH_PATHS:
+        - $(inherited)
+        - $(SRCROOT)/../../build/apple-network-deps/$(PLATFORM_NAME)/lib
   mame-mac:
     base:
+      HEADER_SEARCH_PATHS:
+        - $(inherited)
+        - $(SRCROOT)/../../build/apple-network-deps/$(PLATFORM_NAME)/include
+      LIBRARY_SEARCH_PATHS:
+        - $(inherited)
+        - $(SRCROOT)/../../build/apple-network-deps/$(PLATFORM_NAME)/lib
       OTHER_LDFLAGS:
         - -lc++
+        - -lslirp
+        - -lglib-2.0
+        - -lpcre2-8
+        - -lresolv
+        - -liconv
+        - -lm
+        - -framework Foundation
         - -framework Carbon
         - -framework CoreAudio
         - -framework CoreFoundation
@@ -263,8 +281,19 @@ targets:
         OTHER_CODE_SIGN_FLAGS: --options runtime
         MACOSX_DEPLOYMENT_TARGET: "26.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        LIBRARY_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../../build/apple-network-deps/$(PLATFORM_NAME)/lib
         OTHER_LDFLAGS:
           - -lc++
+          - -lslirp
+          - -lglib-2.0
+          - -lpcre2-8
+          - -lresolv
+          - -liconv
+          - -lm
+          - -framework
+          - Foundation
           - -framework
           - Carbon
           - -framework
@@ -315,6 +344,9 @@ targets:
         SWIFT_VERSION: "5.0"
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
         SUPPORTED_PLATFORMS: iphoneos iphonesimulator
+        LIBRARY_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../../build/apple-network-deps/$(PLATFORM_NAME)/lib
         # xcodegen appends -ObjC to OTHER_LDFLAGS for a target that links a
         # static-library target (here DataRoverCore) and re-adds it on every
         # `xcodegen generate`, so scripts/inject_mame_sources.py strips it
@@ -325,6 +357,16 @@ targets:
         # committed file must stay the pipeline output.
         OTHER_LDFLAGS:
           - -lc++
+          - -lslirp
+          - -lglib-2.0
+          - -lpcre2-8
+          - -lresolv
+          - -liconv
+          - -lm
+          - -framework
+          - Foundation
+          - -framework
+          - CoreFoundation
           - "-framework CoreMIDI"
     sources:
       - path: App/AppIcon.icon

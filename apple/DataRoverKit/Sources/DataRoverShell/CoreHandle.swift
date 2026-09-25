@@ -16,8 +16,15 @@ public enum PenPhase {
 
 /// Create a core handle. Returns nil when the fork returns NULL
 /// (boot failure). Caller owns the handle; destroy with `coreDestroy`.
-public func coreCreate(nvram: String, cfg: String, rom: String) -> UnsafeMutableRawPointer? {
-    datarover_create(nvram, cfg, rom)
+public func coreCreate(nvram: String, cfg: String, rom: String, networkEnabled: Bool) -> UnsafeMutableRawPointer? {
+    var options = datarover_create_options(
+        struct_size: UInt32(MemoryLayout<datarover_create_options>.size),
+        network_enabled: networkEnabled ? 1 : 0,
+        audio_output_enabled: 1
+    )
+    return withUnsafePointer(to: &options) { optionsPointer in
+        datarover_create_with_options(nvram, cfg, rom, optionsPointer)
+    }
 }
 
 /// Destroy a handle created by `coreCreate`. Safe to call with nil.
@@ -93,4 +100,19 @@ public func coreRestart(_ handle: UnsafeMutableRawPointer) {
 /// draw whose revision it has already shown.
 public func coreFrameRevision(_ handle: UnsafeMutableRawPointer) -> UInt64 {
     datarover_frame_revision(handle)
+}
+
+/// Current host network backend status: 0 disabled, 1 ready, -1 unavailable.
+public func coreNetworkStatus(_ handle: UnsafeMutableRawPointer) -> Int {
+    Int(datarover_network_status(handle))
+}
+
+/// Pull mono signed PCM frames from the bounded core queue without blocking.
+public func coreAudioRead(_ handle: UnsafeMutableRawPointer, into samples: UnsafeMutablePointer<Int16>, capacity: Int) -> Int {
+    Int(datarover_audio_read(handle, samples, capacity))
+}
+
+/// Discard queued guest sound after audio output has stopped.
+public func coreAudioClear(_ handle: UnsafeMutableRawPointer) {
+    datarover_audio_clear(handle)
 }
