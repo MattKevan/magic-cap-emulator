@@ -38,6 +38,8 @@ tar -xf "$SRC/libslirp-$SLIRP_VERSION.tar.gz" -C "$SRC/libslirp" --strip-compone
 build_slice() {
   local platform="$1" sdk="$2" triple="$3" sdkroot="$4"
   local prefix="$OUT/$platform" build="$WORK/$platform"
+  local subsystem=ios
+  [[ "$sdk" == macosx ]] && subsystem=macos
   mkdir -p "$prefix" "$build"
   cat > "$build/apple-cross.ini" <<EOF
 [binaries]
@@ -49,6 +51,8 @@ pkg-config = 'pkg-config'
 
 [host_machine]
 system = 'darwin'
+subsystem = '$subsystem'
+kernel = 'xnu'
 cpu_family = 'aarch64'
 cpu = 'arm64'
 endian = 'little'
