@@ -12,7 +12,7 @@ for tool in xcrun clang clang++ cmake meson ninja pkg-config curl shasum; do
 done
 
 PCRE_VERSION=10.48
-PCRE_SHA=b6c68fdf6f3ac31388b50aa89ff0fc49c00c987c16e7b5146491d12003f2c8ed
+PCRE_SHA=ebcc25aadf2a51fa1fefa9b8bc9e7a79b3dae86870a0f1152a22e42befd46888
 GLIB_VERSION=2.90.0
 GLIB_SHA=17d15cac2af80a33271127408e0abc2748eb297c595c2a26409e81e14e7d1b8f
 SLIRP_VERSION=4.9.5
