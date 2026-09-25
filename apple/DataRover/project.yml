@@ -175,6 +175,53 @@ settingGroups:
     base:
       HEADER_SEARCH_PATHS:
         - $(inherited)
+        - $(MAME_DIR)/src
+        - $(MAME_DIR)/src/osd
+        - $(MAME_DIR)/src/emu
+        - $(MAME_DIR)/src/frontend/mame
+        - $(MAME_DIR)/src/devices
+        - $(MAME_DIR)/src/lib
+        - $(MAME_DIR)/src/lib/util
+        - $(MAME_DIR)/src/mame
+        - $(MAME_DIR)/src/mame/shared
+        - $(MAME_DIR)/src/lib/netlist
+        - $(MAME_DIR)/src/osd/modules/file
+        - $(MAME_DIR)/src/osd/modules/render
+        - $(MAME_DIR)/3rdparty
+        - $(MAME_DIR)/3rdparty/asio/include
+        - $(MAME_DIR)/3rdparty/asmjit
+        - $(MAME_DIR)/3rdparty/bgfx/include
+        - $(MAME_DIR)/3rdparty/bgfx/3rdparty
+        - $(MAME_DIR)/3rdparty/bgfx/3rdparty/khronos
+        - $(MAME_DIR)/3rdparty/bimg/include
+        - $(MAME_DIR)/3rdparty/bx/include
+        - $(MAME_DIR)/3rdparty/bx/include/compat/osx
+        - $(MAME_DIR)/3rdparty/expat/lib
+        - $(MAME_DIR)/3rdparty/flac/include
+        - $(MAME_DIR)/3rdparty/flac/src/libFLAC/include
+        - $(MAME_DIR)/3rdparty/glm
+        - $(MAME_DIR)/3rdparty/libjpeg
+        - $(MAME_DIR)/3rdparty/linenoise
+        - $(MAME_DIR)/3rdparty/lua/src
+        - $(MAME_DIR)/3rdparty/portmidi/pm_common
+        - $(MAME_DIR)/3rdparty/portmidi/porttime
+        - $(MAME_DIR)/3rdparty/pugixml/src
+        - $(MAME_DIR)/3rdparty/rapidjson/include
+        - $(MAME_DIR)/3rdparty/softfloat3/source
+        - $(MAME_DIR)/3rdparty/softfloat3/source/include
+        - $(MAME_DIR)/3rdparty/softfloat3/source/8086
+        - $(MAME_DIR)/3rdparty/softfloat3/bochs_ext
+        - $(MAME_DIR)/3rdparty/softfloat3/build/MAME
+        - $(MAME_DIR)/3rdparty/sol2
+        - $(MAME_DIR)/3rdparty/sqlite3
+        - $(MAME_DIR)/3rdparty/utf8proc
+        - $(MAME_DIR)/3rdparty/zlib
+        - $(MAME_DIR)/3rdparty/zstd/lib
+        - $(MAME_DIR)/build/generated
+        - $(MAME_DIR)/build/generated/emu
+        - $(MAME_DIR)/build/generated/emu/layout
+        - $(MAME_DIR)/build/generated/mame
+        - $(MAME_DIR)/build/generated/mame/layout
         - $(SRCROOT)/Core/ios_compat
         - $(SRCROOT)/../../build/apple-network-deps/$(PLATFORM_NAME)/include
       LIBRARY_SEARCH_PATHS:
@@ -184,6 +231,53 @@ settingGroups:
     base:
       HEADER_SEARCH_PATHS:
         - $(inherited)
+        - $(MAME_DIR)/src
+        - $(MAME_DIR)/src/osd
+        - $(MAME_DIR)/src/emu
+        - $(MAME_DIR)/src/frontend/mame
+        - $(MAME_DIR)/src/devices
+        - $(MAME_DIR)/src/lib
+        - $(MAME_DIR)/src/lib/util
+        - $(MAME_DIR)/src/mame
+        - $(MAME_DIR)/src/mame/shared
+        - $(MAME_DIR)/src/lib/netlist
+        - $(MAME_DIR)/src/osd/modules/file
+        - $(MAME_DIR)/src/osd/modules/render
+        - $(MAME_DIR)/3rdparty
+        - $(MAME_DIR)/3rdparty/asio/include
+        - $(MAME_DIR)/3rdparty/asmjit
+        - $(MAME_DIR)/3rdparty/bgfx/include
+        - $(MAME_DIR)/3rdparty/bgfx/3rdparty
+        - $(MAME_DIR)/3rdparty/bgfx/3rdparty/khronos
+        - $(MAME_DIR)/3rdparty/bimg/include
+        - $(MAME_DIR)/3rdparty/bx/include
+        - $(MAME_DIR)/3rdparty/bx/include/compat/osx
+        - $(MAME_DIR)/3rdparty/expat/lib
+        - $(MAME_DIR)/3rdparty/flac/include
+        - $(MAME_DIR)/3rdparty/flac/src/libFLAC/include
+        - $(MAME_DIR)/3rdparty/glm
+        - $(MAME_DIR)/3rdparty/libjpeg
+        - $(MAME_DIR)/3rdparty/linenoise
+        - $(MAME_DIR)/3rdparty/lua/src
+        - $(MAME_DIR)/3rdparty/portmidi/pm_common
+        - $(MAME_DIR)/3rdparty/portmidi/porttime
+        - $(MAME_DIR)/3rdparty/pugixml/src
+        - $(MAME_DIR)/3rdparty/rapidjson/include
+        - $(MAME_DIR)/3rdparty/softfloat3/source
+        - $(MAME_DIR)/3rdparty/softfloat3/source/include
+        - $(MAME_DIR)/3rdparty/softfloat3/source/8086
+        - $(MAME_DIR)/3rdparty/softfloat3/bochs_ext
+        - $(MAME_DIR)/3rdparty/softfloat3/build/MAME
+        - $(MAME_DIR)/3rdparty/sol2
+        - $(MAME_DIR)/3rdparty/sqlite3
+        - $(MAME_DIR)/3rdparty/utf8proc
+        - $(MAME_DIR)/3rdparty/zlib
+        - $(MAME_DIR)/3rdparty/zstd/lib
+        - $(MAME_DIR)/build/generated
+        - $(MAME_DIR)/build/generated/emu
+        - $(MAME_DIR)/build/generated/emu/layout
+        - $(MAME_DIR)/build/generated/mame
+        - $(MAME_DIR)/build/generated/mame/layout
         - $(SRCROOT)/../../build/apple-network-deps/$(PLATFORM_NAME)/include
       LIBRARY_SEARCH_PATHS:
         - $(inherited)
