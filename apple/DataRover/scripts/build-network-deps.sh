@@ -72,8 +72,8 @@ EOF
   export PKG_CONFIG_PATH="$prefix/lib/pkgconfig" PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig"
   meson setup "$build/glib" "$SRC/glib" --cross-file "$build/apple-cross.ini" --prefix "$prefix" \
     --default-library=static --buildtype=release -Dtests=false -Dinstalled_tests=false \
-    -Dintrospection=disabled -Dgtk_doc=false -Dnls=disabled -Dlibmount=disabled \
-    -Dlibselinux=disabled -Dlibelf=disabled -Dman-pages=disabled -Dsysprof=disabled
+    -Dintrospection=disabled -Ddocumentation=false -Dnls=disabled -Dlibmount=disabled \
+    -Dselinux=disabled -Dlibelf=disabled -Dman-pages=disabled -Dsysprof=disabled
   meson compile -C "$build/glib"
   meson install -C "$build/glib"
 
