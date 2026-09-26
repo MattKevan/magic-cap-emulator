@@ -35,6 +35,16 @@ tar -xf "$SRC/pcre2-$PCRE_VERSION.tar.gz" -C "$SRC/pcre2" --strip-components=1
 tar -xf "$SRC/glib-$GLIB_VERSION.tar.xz" -C "$SRC/glib" --strip-components=1
 tar -xf "$SRC/libslirp-$SLIRP_VERSION.tar.gz" -C "$SRC/libslirp" --strip-components=1
 
+meson_setup_retryable() {
+  local build_dir="$1"
+  shift
+  if [[ -f "$build_dir/meson-private/coredata.dat" ]]; then
+    meson setup --wipe "$build_dir" "$@"
+  else
+    meson setup "$build_dir" "$@"
+  fi
+}
+
 build_slice() {
   local platform="$1" sdk="$2" triple="$3" sdkroot="$4"
   local prefix="$OUT/$platform" build="$WORK/$platform"
@@ -45,6 +55,7 @@ build_slice() {
 [binaries]
 c = ['xcrun', '--sdk', '$sdk', 'clang', '-target', '$triple', '-isysroot', '$sdkroot']
 cpp = ['xcrun', '--sdk', '$sdk', 'clang++', '-target', '$triple', '-isysroot', '$sdkroot']
+objc = ['xcrun', '--sdk', '$sdk', 'clang', '-target', '$triple', '-isysroot', '$sdkroot']
 ar = ['xcrun', '--sdk', '$sdk', 'ar']
 strip = ['xcrun', '--sdk', '$sdk', 'strip']
 pkg-config = 'pkg-config'
@@ -59,7 +70,6 @@ endian = 'little'
 
 [properties]
 needs_exe_wrapper = true
-sys_root = '$sdkroot'
 EOF
   export SDKROOT="$sdkroot" CC="xcrun --sdk $sdk clang -target $triple -isysroot $sdkroot" CXX="xcrun --sdk $sdk clang++ -target $triple -isysroot $sdkroot"
   export CFLAGS="-O2 -fPIC -arch arm64 -target $triple -isysroot $sdkroot"
@@ -74,7 +84,7 @@ EOF
   cmake --build "$build/pcre2" --target install
 
   export PKG_CONFIG_PATH="$prefix/lib/pkgconfig" PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig"
-  meson setup "$build/glib" "$SRC/glib" --cross-file "$build/apple-cross.ini" --prefix "$prefix" \
+  meson_setup_retryable "$build/glib" "$SRC/glib" --cross-file "$build/apple-cross.ini" --prefix "$prefix" \
     --default-library=static --buildtype=release -Dtests=false -Dinstalled_tests=false \
     -Dintrospection=disabled -Ddocumentation=false -Dnls=disabled -Dlibmount=disabled \
     -Dselinux=disabled -Dlibelf=disabled -Dman-pages=disabled -Dsysprof=disabled
@@ -82,8 +92,8 @@ EOF
   meson install -C "$build/glib"
 
   export PKG_CONFIG_PATH="$prefix/lib/pkgconfig" PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig"
-  meson setup "$build/slirp" "$SRC/libslirp" --cross-file "$build/apple-cross.ini" --prefix "$prefix" \
-    --default-library=static --buildtype=release -Dtests=false
+  meson_setup_retryable "$build/slirp" "$SRC/libslirp" --cross-file "$build/apple-cross.ini" --prefix "$prefix" \
+    --default-library=static --buildtype=release
   meson compile -C "$build/slirp"
   meson install -C "$build/slirp"
 }
@@ -93,9 +103,9 @@ build_slice iphonesimulator iphonesimulator arm64-apple-ios26.0-simulator "$(xcr
 build_slice macosx macosx arm64-apple-macosx26.0 "$(xcrun --sdk macosx --show-sdk-path)"
 
 mkdir -p "$OUT/THIRD_PARTY_LICENSES"
-cp "$SRC/pcre2/LICENCE" "$OUT/THIRD_PARTY_LICENSES/PCRE2-LICENCE"
+cp "$SRC/pcre2/LICENCE.md" "$OUT/THIRD_PARTY_LICENSES/PCRE2-LICENCE.md"
 cp "$SRC/glib/COPYING" "$OUT/THIRD_PARTY_LICENSES/GLib-COPYING"
-cp "$SRC/libslirp/COPYING" "$OUT/THIRD_PARTY_LICENSES/libslirp-COPYING"
+cp "$SRC/libslirp/LICENSE" "$OUT/THIRD_PARTY_LICENSES/libslirp-LICENSE"
 
 echo "Static Apple networking dependencies installed under $OUT/{iphoneos,iphonesimulator,macosx}."
 echo "License notices are in $OUT/THIRD_PARTY_LICENSES; include them in distributed app builds."
