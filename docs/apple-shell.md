@@ -266,29 +266,43 @@ SHA-256 `94785cb334f14eac00ed200af014c35972b4f25694103bc6a49b3afa280a6f1b`.
 The macOS app takes the same image, either through File ▸ Import ROM… or by
 copying it into the app container's `roms/datarover840/`.
 
-## Known issues
+## Checkpoint freeze and restart regression
 
-Two defects in the emulated core surfaced while these layouts were being
-verified. Neither is caused by the package extraction and neither is fixed
-here; both are core-side, not app- or package-side.
+Saving and restoring from the headless OSD's screen update callback was unsafe:
+that callback executes inside `screen_device::vblank_begin`, before its timer
+has been rearmed. Loading a checkpoint there replaced scheduler time while
+an older timer callback was still on the stack. On the frozen macOS app,
+scheduler base time was 13,890 seconds but the active screen timer was at
+438 seconds. The scheduler replayed screen ticks without returning to CPU
+execution or completing an already-pending exit. The native input queue and
+Restart flag were set correctly; the displayed frame remained unchanged.
 
-- **Restart segfaults during soft reset.** Choosing Restart in the iOS logo
-  menu crashes inside MAME's
-  `sound_stream`/`dmadac` path while the machine resets. The ABI call
-  (`datarover_restart`) only sets a flag and wakes the worker, and the crash
-  log has no frame from the app or the package. The fork's headless controls
-  regression does drive `datarover_restart`
-  (`src/libdatarover/tests/controls.cpp:30`) and passes, linked against the
-  app's own `libDataRoverCore.a` — `PASS controls, pause, checkpoint, restart,
-  resume and corrupt-save fallback` — so the crash is specific to the app's
-  configuration or state, and its cause is not yet explained. The crash was
-  observed on iOS only: the macOS File-menu Restart path has not been
-  exercised (see the verification note below).
-- **A saved checkpoint suppresses guest pen input.** With a `cfg/session.sta`
-  checkpoint present in the app's support root, the guest renders but ignores
-  the pen: it restores into a state where the touch-gated startup and
-  calibration screens never run. A checkpoint is written on every
-  pause/background entry and every 60 seconds while running, so a normal
-  session leaves one behind — this is why the iOS acceptance command above
-  deletes `Documents/cfg/session.sta` first. Removing the file restores pen
-  input.
+The core now services controls, snapshots and framebuffer publication from
+`MACHINE_NOTIFY_TIMESLICE`, after the scheduler has returned. Frame copies and
+queued input retain a 60 Hz cadence; restart, save, pause and shutdown are
+checked at every safe boundary. Restart recreates the machine instead of
+soft-resetting its sound streams. Existing `.restart-<timestamp>` and
+`.stuck-<timestamp>` backups are retained by the recovery paths.
+
+Run the macOS regression against the actual built core:
+
+```sh
+CORE_LIBRARY=/absolute/path/to/libDataRoverCoreMac.a \
+ROM_PATH=/absolute/path/to/magiccap-usa.image \
+  tools/test_core_checkpoint.sh
+```
+
+The runner uses a fresh temporary state directory and a 90-second outer
+limit. It boots to the welcome screen, checkpoints while paused, destroys and
+restores the core, requires a guest framebuffer response to a welcome tap
+before stuck-state recovery could mask the failure, then requires Restart to
+complete within three seconds. The original library failed the restart check;
+the corrected library passes the touch and restart checks. The existing
+`controls.cpp` regression also passes pause, save, restart, reload, corrupt-save
+fallback and paused shutdown against the macOS library.
+
+A copy of the previously frozen app checkpoint was also exercised: its
+three-second recovery now reaches a cold boot while preserving the original
+checkpoint and NVRAM as backups. This verifies recovery from that damaged
+snapshot, not that every legacy snapshot is repairable. The shared code change
+has been built and tested on macOS; iOS device verification remains separate.
