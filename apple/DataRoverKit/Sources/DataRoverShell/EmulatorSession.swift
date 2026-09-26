@@ -128,7 +128,6 @@ public final class EmulatorSession: ObservableObject {
     public func restart() {
         guard let handle else { return }
         audioOutput?.stop()
-        coreRequestSave(handle)
         coreRestart(handle)
         if !isPaused, audioOutput?.start() == false { audioMessage = "Speaker playback is unavailable" }
     }

@@ -18,6 +18,7 @@
 // blit, never frame advance.
 import MetalKit
 import DataRoverKit
+import Foundation
 
 /// Drives an `MTKView` from the session's guest framebuffer. The host view
 /// owns the presenter and attaches its `MTKView` to it.
@@ -25,10 +26,12 @@ public final class FramebufferPresenter: NSObject, MTKViewDelegate {
     private let session: EmulatorSession
     private weak var view: MTKView?
     private var lastRevision: UInt64 = 0
+    private var hasUploadedFrame = false
     private var queue: MTLCommandQueue?
     private var texture: MTLTexture?
     private var pipeline: MTLRenderPipelineState?
     private var sampler: MTLSamplerState?
+    private var thermalObserver: NSObjectProtocol?
     // Persistent RGBA8 staging: 480*320*4 bytes, reused every frame.
     private var staging = [UInt8](repeating: 0, count: 480 * 320 * 4)
 
@@ -73,6 +76,14 @@ public final class FramebufferPresenter: NSObject, MTKViewDelegate {
         view.preferredFramesPerSecond = 30
         view.isPaused = false
         view.delegate = self
+        updateThermalFrameRate()
+        thermalObserver = NotificationCenter.default.addObserver(
+            forName: ProcessInfo.thermalStateDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.updateThermalFrameRate()
+        }
         guard let device = view.device else { return }
         queue = device.makeCommandQueue()
         let desc = MTLTextureDescriptor.texture2DDescriptor(
@@ -100,6 +111,10 @@ public final class FramebufferPresenter: NSObject, MTKViewDelegate {
     }
 
     public func detach() {
+        if let thermalObserver {
+            NotificationCenter.default.removeObserver(thermalObserver)
+            self.thermalObserver = nil
+        }
         view?.delegate = nil
         view?.isPaused = true
         view = nil
@@ -107,6 +122,20 @@ public final class FramebufferPresenter: NSObject, MTKViewDelegate {
         texture = nil
         pipeline = nil
         sampler = nil
+    }
+
+    private func updateThermalFrameRate() {
+        guard let view else { return }
+        switch ProcessInfo.processInfo.thermalState {
+        case .nominal, .fair:
+            view.preferredFramesPerSecond = 30
+        case .serious:
+            view.preferredFramesPerSecond = 15
+        case .critical:
+            view.preferredFramesPerSecond = 10
+        @unknown default:
+            view.preferredFramesPerSecond = 30
+        }
     }
 
     // MARK: MTKViewDelegate
@@ -123,15 +152,18 @@ public final class FramebufferPresenter: NSObject, MTKViewDelegate {
         // The core returns nil when emulation has stopped.
         guard session.alive else { return }
         let revision = coreFrameRevision(sessionHandle)
-        guard revision != lastRevision else { return }
-        let (bytes, size) = coreFramebuffer(of: sessionHandle)
-        guard let bytes, size == 480 * 320 / 4,
-              let drawable = view.currentDrawable else { return }
-        expand2bpp(src: bytes, count: size)
-        let region = MTLRegionMake2D(0, 0, 480, 320)
-        staging.withUnsafeBytes { buf in
-            texture.replace(region: region, mipmapLevel: 0,
-                            withBytes: buf.baseAddress!, bytesPerRow: 480 * 4)
+        guard let drawable = view.currentDrawable else { return }
+        if revision != lastRevision || !hasUploadedFrame {
+            let (bytes, size) = coreFramebuffer(of: sessionHandle)
+            guard let bytes, size == 480 * 320 / 4 else { return }
+            expand2bpp(src: bytes, count: size)
+            let region = MTLRegionMake2D(0, 0, 480, 320)
+            staging.withUnsafeBytes { buf in
+                texture.replace(region: region, mipmapLevel: 0,
+                                withBytes: buf.baseAddress!, bytesPerRow: 480 * 4)
+            }
+            lastRevision = revision
+            hasUploadedFrame = true
         }
         // Aspect-fit NDC scale: min-fit of 480x320 into the drawable.
         let dw = Float(drawable.texture.width)
@@ -153,7 +185,6 @@ public final class FramebufferPresenter: NSObject, MTKViewDelegate {
         encoder.endEncoding()
         buffer.present(drawable)
         buffer.commit()
-        lastRevision = revision
     }
 
     /// Expand `count` 2bpp bytes into the persistent RGBA8 staging buffer.

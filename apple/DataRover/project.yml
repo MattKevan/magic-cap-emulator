@@ -286,6 +286,7 @@ settingGroups:
         - -lc++
         - -lslirp
         - -lglib-2.0
+        - -lintl
         - -lpcre2-8
         - -lresolv
         - -liconv
@@ -382,6 +383,7 @@ targets:
           - -lc++
           - -lslirp
           - -lglib-2.0
+          - -lintl
           - -lpcre2-8
           - -lresolv
           - -liconv
@@ -453,6 +455,7 @@ targets:
           - -lc++
           - -lslirp
           - -lglib-2.0
+          - -lintl
           - -lpcre2-8
           - -lresolv
           - -liconv

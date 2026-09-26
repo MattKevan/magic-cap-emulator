@@ -16,9 +16,12 @@ Actual device heat still needs a sustained physical-device check.
 A complete MAME checkpoint is atomically replaced on background/menu entry,
 manual save, clean shutdown and every 60 seconds while running. iOS background
 saving uses a bounded background task. Relaunch restores the checkpoint;
-invalid saves fall back to booting from NVRAM. Force termination before a save
-finishes can lose changes since the previous checkpoint. Saves are tied to the
-current core's state format; NVRAM fallback may contain older data.
+invalid saves fall back to booting from NVRAM. If a restored screen does not
+repaint within three seconds of a tap, the core preserves its checkpoint and
+battery-backed RAM beside their original files with a `.stuck-<timestamp>`
+suffix, then cold boots. Force termination before a save finishes can lose
+changes since the previous checkpoint. Saves are tied to the current core's
+state format; NVRAM fallback may contain older data.
 
 Package import copies the selected file into Documents/packages and then
 installs it into the running guest through the core's in-process PCLink
@@ -244,9 +247,10 @@ repaints after each press; the guest only advances that flow when the pen
 lands where it is waiting, so reaching the workbench is the proof. Two
 prerequisites:
 
-- The checkpoint delete above is required, not optional: a restored checkpoint
-  leaves the guest rendering but ignoring the pen, so a second run without it
-  starts from the restored guest and fails.
+- The checkpoint delete above keeps the acceptance run deterministic. A
+  restored guest that does not repaint after a tap now cold boots automatically,
+  but that recovery path is separate from the startup and calibration flow this
+  test verifies.
 - The ROM fixture must be in the container at
   `Documents/roms/datarover840/magiccap-usa.image`. Without it the app shows
   its "Import ROM…" empty state and the test skips instead of failing.
