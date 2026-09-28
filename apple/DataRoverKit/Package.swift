@@ -8,11 +8,18 @@ let package = Package(
         .library(name: "DataRoverKit", targets: ["DataRoverKit"]),
         .library(name: "DataRoverShell", targets: ["DataRoverShell"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/scinfu/SwiftSoup.git", from: "2.7.0"),
+    ],
     targets: [
         .target(name: "CDataRoverABI"),
         .target(name: "DataRoverKit"),
-        .target(name: "DataRoverShell", dependencies: ["DataRoverKit", "CDataRoverABI"],
+        // Host web proxy and package downloads. No core dependency, so its
+        // tests link without the emulator library.
+        .target(name: "DataRoverWeb", dependencies: ["SwiftSoup"]),
+        .target(name: "DataRoverShell", dependencies: ["DataRoverKit", "DataRoverWeb", "CDataRoverABI"],
                 resources: [.process("Resources")]),
         .testTarget(name: "DataRoverKitTests", dependencies: ["DataRoverKit"]),
+        .testTarget(name: "DataRoverWebTests", dependencies: ["DataRoverWeb"]),
     ]
 )
