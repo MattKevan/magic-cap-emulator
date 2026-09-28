@@ -94,26 +94,30 @@ private func exchange(port: UInt16, _ text: String) async throws -> String {
 
     /// Regression: `stop()` racing a still-in-flight `start()` used to leave
     /// the listener cancelled without ever resuming `start()`'s continuation,
-    /// hanging it forever. Either outcome (`start()` throws or succeeds) is
-    /// fine here — what matters is that it settles quickly instead of hanging.
+    /// hanging it forever. The `onStartPending` seam runs the stop on the proxy's
+    /// queue while start() is provably pending, so start() must throw
+    /// CancellationError promptly.
     @Test func stoppingDuringStartDoesNotHang() async throws {
         let proxy = WebProxy(pipeline: ProxyPipeline(fetcher: EchoFetcher(), simplify: { true }))
+        // Force the race: stop while start() is definitely pending, before the
+        // listener's .ready/.cancelled update can be processed on the queue.
+        proxy.onStartPending = { [unowned proxy] in proxy.stopOnQueue() }
         let startTask = Task { try await proxy.start() }
-        proxy.stop()
-        defer { startTask.cancel(); proxy.stop() }
-        let finishedInTime = await withTaskGroup(of: Bool.self) { group in
+        defer { startTask.cancel(); proxy.onStartPending = nil; proxy.stop() }
+        let outcome = await withTaskGroup(of: String.self) { group in
             group.addTask {
-                _ = try? await startTask.value
-                return true
+                do { _ = try await startTask.value; return "returned" }
+                catch is CancellationError { return "cancelled" }
+                catch { return "other: \(error)" }
             }
             group.addTask {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
-                return false
+                return "timeout"
             }
-            let first = await group.next() ?? false
+            let first = await group.next() ?? "timeout"
             group.cancelAll()
             return first
         }
-        #expect(finishedInTime, "start() should throw or return within 2 seconds of a concurrent stop(), not hang")
+        #expect(outcome == "cancelled", "start() should throw CancellationError within 2s of a concurrent stop(); got \(outcome)")
     }
 }

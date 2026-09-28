@@ -18,6 +18,12 @@ public final class WebProxy: @unchecked Sendable {
     /// concurrent `stop()`/`start()` pre-empting it.
     private var pendingStart: CheckedContinuation<UInt16, Error>?
 
+    /// Test-only seam (reach it via `@testable`). Invoked on `queue`, inside
+    /// `start()`'s queue work, right after `pendingStart` is set and the
+    /// listener started, so a test can deterministically run `stopOnQueue()`
+    /// while `start()` is still pending. Never set in production.
+    var onStartPending: (() -> Void)?
+
     public init(pipeline: ProxyPipeline) { self.pipeline = pipeline }
 
     /// Starts listening on 127.0.0.1 and returns the port.
@@ -36,6 +42,7 @@ public final class WebProxy: @unchecked Sendable {
                 self.pendingStart = continuation
                 self.listener = listener
                 listener.start(queue: queue)
+                self.onStartPending?()
             }
         }
     }
@@ -76,18 +83,22 @@ public final class WebProxy: @unchecked Sendable {
         resolvePendingStart(.failure(error))
     }
 
+    /// Must not be called on the proxy's own queue (it uses `queue.sync`).
     public func stop() {
         // `stop()` is called from the app's own threads, so every touch of
         // `listener`/`pendingStart`/`connections` is confined to the serial
         // queue — including failing a `start()` still waiting on this
         // listener, so it throws instead of hanging forever.
-        queue.sync {
-            listener?.cancel()
-            listener = nil
-            failPendingStart(with: CancellationError())
-            connections.values.forEach { $0.cancel() }
-            connections.removeAll()
-        }
+        queue.sync { stopOnQueue() }
+    }
+
+    /// The body of `stop()`; must run on `queue`.
+    func stopOnQueue() {
+        listener?.cancel()
+        listener = nil
+        failPendingStart(with: CancellationError())
+        connections.values.forEach { $0.cancel() }
+        connections.removeAll()
     }
 
     private func accept(_ connection: NWConnection) {
