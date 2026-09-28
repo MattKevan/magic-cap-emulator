@@ -1,7 +1,13 @@
 import Foundation
+import Testing
+
+/// Parent suite for every test that uses `StubURLProtocol`. Its state is
+/// process-wide and Swift Testing runs separate suites in parallel, so all such
+/// suites nest here; `.serialized` on the parent serializes the nested ones too.
+@Suite(.serialized) struct StubbedNetworkTests {}
 
 /// Serves canned responses by URL for URLSession tests. Tests using it must
-/// be in a `.serialized` suite: the handler is process-wide.
+/// live in a suite nested in `StubbedNetworkTests`: the handler is process-wide.
 final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     enum Reply { case response(Int, [String: String], Data), failure(URLError.Code) }
     nonisolated(unsafe) static var replies: [String: Reply] = [:]

@@ -3,7 +3,8 @@ import Foundation
 import Testing
 @testable import DataRoverWeb
 
-@Suite(.serialized) struct BrowserPackagesTests {
+extension StubbedNetworkTests {
+@Suite struct BrowserPackagesTests {
     private let bytes = Data("fake package".utf8)
     private var digest: String { SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined() }
     private func directory() throws -> URL {
@@ -42,11 +43,22 @@ import Testing
         #expect(StubURLProtocol.seen.isEmpty)
     }
 
+    @Test func replacesACorruptExistingFileWithAVerifiedDownload() async throws {
+        let package = BrowserPackage(name: "Test.pkg", url: URL(string: "https://p.example/Test.pkg")!,
+                                     size: bytes.count, sha256: digest)
+        StubURLProtocol.replies = [package.url.absoluteString: .response(200, [:], bytes)]
+        let dir = try directory()
+        try Data("corrupt".utf8).write(to: dir.appendingPathComponent("Test.pkg"))
+        let file = try await downloader().ensure(package, in: dir)
+        #expect(try Data(contentsOf: file) == bytes)
+    }
+
     @Test func rejectsAndDeletesMismatches() async throws {
         let package = BrowserPackage(name: "Bad.pkg", url: URL(string: "https://p.example/Bad.pkg")!,
                                      size: 3, sha256: String(repeating: "0", count: 64))
         StubURLProtocol.replies = [package.url.absoluteString: .response(200, [:], Data("bad".utf8))]
         let dir = try directory()
+        try Data("stale".utf8).write(to: dir.appendingPathComponent("Bad.pkg"))
         await #expect(throws: PackageDownloadError.checksumMismatch("Bad.pkg")) {
             try await downloader().ensure(package, in: dir)
         }
@@ -60,4 +72,5 @@ import Testing
             try await downloader().ensure(package, in: try directory())
         }
     }
+}
 }

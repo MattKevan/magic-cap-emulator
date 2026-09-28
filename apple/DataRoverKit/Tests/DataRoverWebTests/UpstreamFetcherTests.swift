@@ -8,7 +8,8 @@ private final class Capture<Value>: @unchecked Sendable {
     var value: Value?
 }
 
-@Suite(.serialized) struct UpstreamFetcherTests {
+extension StubbedNetworkTests {
+@Suite struct UpstreamFetcherTests {
     private func fetcher(allow: Bool = true) -> UpstreamFetcher {
         StubURLProtocol.seen = []
         return UpstreamFetcher(configuration: StubURLProtocol.configuration(), policy: { _ in allow })
@@ -107,4 +108,5 @@ private final class Capture<Value>: @unchecked Sendable {
             try await fetcher().fetch(ProxyRequest(method: "GET", host: "nowhere.example", target: "/"))
         }
     }
+}
 }
