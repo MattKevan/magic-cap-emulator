@@ -81,4 +81,40 @@ import Testing
         #expect(!out.contains("Paragraph 399 "))
         #expect(out.contains("Page shortened."))
     }
+
+    // MARK: - Fix round 1 regressions
+
+    @Test func rewritesLinksInLinearTimeOnLargePages() throws {
+        let paragraphs = (0..<2_000).map { "<p><a href=\"/a\($0)\">x</a><img src=\"/i\($0).png\"></p>" }.joined()
+        let start = Date()
+        // Large budget: this test is about link-rewriting cost, not the
+        // separate budget-enforcement pass.
+        _ = try simplify(paragraphs, budget: 10_000_000)
+        #expect(Date().timeIntervalSince(start) < 2.0)
+    }
+
+    @Test func keepsBodyEvenWhenItsOwnClassLooksLikeACookieBanner() throws {
+        let out = try PageSimplifier.simplify(
+            html: "<html><body class=\"has-cookie-banner\"><p>Content</p></body></html>", pageURL: page)
+        #expect(out.contains("Content"))
+        #expect(out.contains("Reader view"))
+    }
+
+    @Test func keepsAContentHeaderHeadlineButFlattensAMenuHeader() throws {
+        let out = try simplify("<article><header><h1>Big Headline</h1></header><p>t</p></article>")
+        #expect(out.contains("<h1>Big Headline</h1>"))
+        #expect(!out.contains("<header"))
+    }
+
+    @Test func truncatesTextHeavyContentInsteadOfStallingOverBudget() throws {
+        let hugeText = String(repeating: "word ", count: 8_000)
+        let out = try simplify("<div>\(hugeText)<span>x</span></div>", budget: 20_000)
+        #expect(out.utf8.count < 22_000)
+        #expect(out.contains("Page shortened."))
+    }
+
+    @Test func omitsTheShortenedNoticeWhenAlreadyWithinBudget() throws {
+        let out = try simplify("<p>Small page</p>")
+        #expect(!out.contains("Page shortened."))
+    }
 }

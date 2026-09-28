@@ -6,34 +6,37 @@ enum HTMLCleaning {
     static let startPageURL = "http://10.0.2.2/"
 
     /// The attribute as an absolute http:// URL, or nil for script and empty links.
+    ///
+    /// Resolves relative to the element's (or its document's) base URI via
+    /// SwiftSoup's own `absUrl`. Callers that need `<base href>` honoured
+    /// must apply it to the document first with `applyBaseHref` — see
+    /// `rewriteLinks` — rather than this function re-deriving it per call,
+    /// which would make repeated calls over a large document quadratic.
     static func downgradedAbsolute(_ element: Element, attribute: String) throws -> String? {
         let raw = try element.attr(attribute).trimmingCharacters(in: .whitespaces)
         if raw.isEmpty || raw.lowercased().hasPrefix("javascript:") { return nil }
         if raw.hasPrefix("#") || raw.lowercased().hasPrefix("mailto:") { return raw }
-        let absolute = try absoluteURL(element, attribute: attribute)
+        let absolute = try element.absUrl(attribute)
         return absolute.isEmpty ? nil : HeaderRewriter.downgrade(absolute)
     }
 
     /// SwiftSoup 2.13.9's `absUrl` does not resolve against a `<base href>`
-    /// in the document head, so resolve against it manually when present.
-    private static func absoluteURL(_ element: Element, attribute: String) throws -> String {
-        guard let ownerDocument = element.ownerDocument(),
-              let base = try ownerDocument.select("base[href]").first(),
-              !(try base.attr("href").isEmpty) else {
-            return try element.absUrl(attribute)
-        }
+    /// in the document head. Apply it once, up front, by updating the
+    /// document's own base URI (SwiftSoup then propagates it to every node
+    /// in one traversal) instead of re-querying the DOM for every attribute
+    /// on every element, which was quadratic on large pages.
+    private static func applyBaseHref(in document: Document) throws {
+        guard let base = try document.select("base[href]").first() else { return }
         let baseHref = try base.attr("href")
-        guard let baseURL = URL(string: baseHref, relativeTo: URL(string: ownerDocument.getBaseUri())) ?? URL(string: baseHref) else {
-            return try element.absUrl(attribute)
+        guard !baseHref.isEmpty,
+              let resolvedBase = URL(string: baseHref, relativeTo: URL(string: document.getBaseUri())) ?? URL(string: baseHref) else {
+            return
         }
-        let raw = try element.attr(attribute)
-        guard let resolved = URL(string: raw, relativeTo: baseURL) else {
-            return try element.absUrl(attribute)
-        }
-        return resolved.absoluteString
+        try document.setBaseUri(resolvedBase.absoluteString)
     }
 
     static func rewriteLinks(in document: Document, pageURL: URL) throws {
+        try applyBaseHref(in: document)
         for attribute in ["href", "src", "action"] {
             for element in try document.select("[\(attribute)]").array() {
                 if element.tagName() == "base" { continue }
