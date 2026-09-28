@@ -2,19 +2,23 @@
 import DataRoverKit
 import SwiftUI
 
-/// The two side rails share the original device's Option input.
-public struct DeviceShellView<Screen: View>: View {
+/// The two side rails share the original device's Option input. The logo
+/// on the left rail opens the controls in a popover beside it.
+public struct DeviceShellView<Screen: View, Controls: View>: View {
     @ObservedObject private var session: EmulatorSession
-    private let openMenu: () -> Void
+    @Binding private var showsControls: Bool
     private let screen: () -> Screen
+    private let controls: () -> Controls
     private let shell = Color(red: 74 / 255, green: 75 / 255, blue: 77 / 255)
 
     public init(session: EmulatorSession,
-                openMenu: @escaping () -> Void,
-                @ViewBuilder screen: @escaping () -> Screen) {
+                showsControls: Binding<Bool>,
+                @ViewBuilder screen: @escaping () -> Screen,
+                @ViewBuilder controls: @escaping () -> Controls) {
         self.session = session
-        self.openMenu = openMenu
+        _showsControls = showsControls
         self.screen = screen
+        self.controls = controls
     }
 
     public var body: some View {
@@ -25,15 +29,19 @@ public struct DeviceShellView<Screen: View>: View {
                 VStack {
                     OptionControl(side: 0, session: session)
                     Spacer(minLength: 12)
-                    Button(action: openMenu) {
+                    Button { showsControls.toggle() } label: {
                         Image("GeneralMagicLogo", bundle: .module)
                             .resizable().scaledToFit()
                             .frame(width: 64, height: 75)
                             .rotationEffect(.degrees(90))
                             .frame(width: min(76, rail - 20), height: 64)
+                            // The logo is mostly transparent line art; without
+                            // this a plain button only takes clicks on its strokes.
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("DataRover controls")
+                    .popover(isPresented: $showsControls, arrowEdge: .trailing) { controls() }
                 }
                 .padding(.vertical, 24)
                 .frame(width: rail)

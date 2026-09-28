@@ -78,6 +78,7 @@ struct DataRoverMacApp: App {
                 Button("Install Package…") { installPackageRequest = true }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
                     .disabled(romStore.romURL == nil)
+                InstallWebBrowserCommand()
                 EmulatorFileCommands()
             }
             CommandGroup(after: .toolbar) {
@@ -110,6 +111,16 @@ private struct EmulatorFileCommands: View {
             menu.session.restart()
         }
         .disabled(menu == nil)
+    }
+}
+
+/// File-menu item for the same flow as the controls' Install Web Browser.
+private struct InstallWebBrowserCommand: View {
+    @FocusedValue(\.emulatorMenu) private var menu
+
+    var body: some View {
+        Button("Install Web Browser…") { menu?.session.installWebBrowser() }
+            .disabled(menu == nil)
     }
 }
 
@@ -148,10 +159,12 @@ struct EmulatorWindowView: View {
     }
 
     var body: some View {
-        DeviceShellView(session: session, openMenu: { showControls = true }) {
+        DeviceShellView(session: session, showsControls: $showControls) {
             EmulatorBody(session: session,
                          framebuffer: { MetalFramebufferView(session: session) },
                          overlay: { PointerPenView(session: session) })
+        } controls: {
+            EmulatorControls(session: session, loadPackage: loadPackage)
         }
         .focusedSceneValue(\.emulatorMenu,
                            EmulatorMenuContext(session: session, paused: $paused))
@@ -166,9 +179,6 @@ struct EmulatorWindowView: View {
             guard requested else { return }
             installPackageRequest = false
             choosePackage()
-        }
-        .sheet(isPresented: $showControls) {
-            EmulatorControlsSheet(session: session, loadPackage: loadPackage)
         }
         .onAppear { optionMonitor = installOptionKeyMonitor() }
         .onDisappear {

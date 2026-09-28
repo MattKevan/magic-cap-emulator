@@ -70,10 +70,12 @@ struct EmulatorContainerView: View {
     }
 
     var body: some View {
-        DeviceShellView(session: session, openMenu: { showControls = true }) {
+        DeviceShellView(session: session, showsControls: $showControls) {
             EmulatorBody(session: session,
                          framebuffer: { MetalFramebufferView(session: session) },
                          overlay: { TouchPenView(session: session) })
+        } controls: {
+            controls
         }
         .onAppear {
             session.setForeground(scenePhase == .active)
@@ -84,22 +86,23 @@ struct EmulatorContainerView: View {
             if phase == .active { requestLandscape() }
         }
         .onChange(of: showControls) { visible in session.setMenuVisible(visible) }
-        .sheet(isPresented: $showControls) {
-            EmulatorControlsSheet(session: session, loadPackage: { showPackageImporter = true })
-                .fileImporter(isPresented: $showPackageImporter,
-                              allowedContentTypes: [.magicCapPackage, .zip, .data]) { result in
-                    do {
-                        let url = try result.get()
-                        // The guest paces the transfer, so it must be running:
-                        // close the sheet, which un-pauses the emulation worker.
-                        showControls = false
-                        session.installPackage(url)
-                    } catch { importMessage = error.localizedDescription }
-                }
-                .alert("Package", isPresented: Binding(get: { importMessage != nil },
-                                                       set: { if !$0 { importMessage = nil } })) {
-                    Button("OK") { importMessage = nil }
-                } message: { Text(importMessage ?? "") }
-        }
+    }
+
+    private var controls: some View {
+        EmulatorControls(session: session, loadPackage: { showPackageImporter = true })
+            .fileImporter(isPresented: $showPackageImporter,
+                          allowedContentTypes: [.magicCapPackage, .zip, .data]) { result in
+                do {
+                    let url = try result.get()
+                    // The guest paces the transfer, so it must be running:
+                    // close the controls, which un-pauses the emulation worker.
+                    showControls = false
+                    session.installPackage(url)
+                } catch { importMessage = error.localizedDescription }
+            }
+            .alert("Package", isPresented: Binding(get: { importMessage != nil },
+                                                   set: { if !$0 { importMessage = nil } })) {
+                Button("OK") { importMessage = nil }
+            } message: { Text(importMessage ?? "") }
     }
 }
