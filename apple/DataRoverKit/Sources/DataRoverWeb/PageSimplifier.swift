@@ -86,28 +86,44 @@ public enum PageSimplifier {
     /// leave the huge text behind and achieve nothing — and truncates that
     /// container's text instead. Only appends the notice if something was
     /// actually removed or truncated, never on an unproductive pass.
+    ///
+    /// Each container's children and text-heaviness are read exactly once
+    /// here (not once per element removed): re-fetching `children()` and
+    /// re-serializing a container's whole, still-mostly-full subtree on
+    /// every single removal is what made an earlier version of this pass
+    /// quadratic on pages with thousands of elements.
     private static func enforce(budget: Int, on document: Document, reader: String) throws {
         guard let body = document.body() else { return }
         var size = try HTMLCleaning.serialize(document).utf8.count
         guard size > budget else { return }
         let notice = "<hr><p>Page shortened. <a href=\"\(reader)\">Reader view</a></p>"
         var changed = false
-        while size > budget {
-            var container = body
-            while container.children().size() == 1, let only = container.children().first(), !isTextHeavy(container) {
-                container = only
-            }
-            if container.children().size() > 1, let last = container.children().last() {
-                size -= try last.outerHtml().utf8.count
-                try last.remove()
-                changed = true
-                continue
-            }
-            if try truncate(container, budget: budget, currentSize: size, notice: notice) {
-                changed = true
-            }
-            break
+
+        var container = body
+        var kids = container.children().array()
+        while kids.count == 1, let only = kids.first, !isTextHeavy(container) {
+            container = only
+            kids = container.children().array()
         }
+
+        if size > budget, kids.count > 1 {
+            // Every child's serialized size is computed once, then trailing
+            // children are dropped one at a time by subtracting from that
+            // precomputed total. SwiftSoup's removal of the *last* child is
+            // O(1) (there are no later siblings to reindex), so this whole
+            // pass is O(children), not O(children²).
+            var sizes = try kids.map { try $0.outerHtml().utf8.count }
+            while size > budget, kids.count > 1 {
+                size -= sizes.removeLast()
+                try kids.removeLast().remove()
+                changed = true
+            }
+        }
+
+        if size > budget, try truncate(container, budget: budget, currentSize: size, notice: notice) {
+            changed = true
+        }
+
         guard changed else { return }
         try body.append(notice)
     }
@@ -126,13 +142,44 @@ public enum PageSimplifier {
     /// container's content with a truncated plain-text version, leaving
     /// room for `notice` to still fit within budget. Returns whether it
     /// actually shortened anything.
+    ///
+    /// HTML-escaping (`&` -> `&amp;`, `<` -> `&lt;`, …) can inflate the
+    /// serialized size well past the plain-text byte count used to pick the
+    /// initial cut, so the actual serialized size is checked and the cut
+    /// shrunk proportionally until it fits — a handful of iterations always
+    /// suffices, since escaping expands a character by at most 5x.
     private static func truncate(_ container: Element, budget: Int, currentSize: Int, notice: String) throws -> Bool {
         let overhead = currentSize - (try container.outerHtml().utf8.count)
-        let allowance = max(0, budget - overhead - notice.utf8.count)
+        let allowedForContainer = max(0, budget - overhead - notice.utf8.count)
         let text = try container.text()
-        guard text.utf8.count > allowance else { return false }
-        let truncated = String(decoding: Array(text.utf8.prefix(allowance)), as: UTF8.self)
-        try container.text(truncated)
+        guard text.utf8.count > allowedForContainer else { return false }
+
+        var allowance = allowedForContainer
+        for _ in 0..<6 {
+            let candidate = safePrefix(of: text, maxBytes: allowance)
+            try container.text(candidate)
+            let containerBytes = try container.outerHtml().utf8.count
+            if containerBytes <= allowedForContainer || candidate.isEmpty { break }
+            let ratio = Double(allowedForContainer) / Double(containerBytes)
+            allowance = max(0, Int(Double(allowance) * ratio) - 1)
+        }
         return true
+    }
+
+    /// The longest prefix of `text` whose UTF-8 encoding is at most
+    /// `maxBytes`, cut on a Character boundary so a multi-byte character is
+    /// never split (which would otherwise decode as U+FFFD).
+    private static func safePrefix(of text: String, maxBytes: Int) -> String {
+        guard maxBytes > 0 else { return "" }
+        guard text.utf8.count > maxBytes else { return text }
+        var bytes = 0
+        var result = ""
+        for character in text {
+            let charBytes = String(character).utf8.count
+            if bytes + charBytes > maxBytes { break }
+            bytes += charBytes
+            result.append(character)
+        }
+        return result
     }
 }

@@ -117,4 +117,29 @@ import Testing
         let out = try simplify("<p>Small page</p>")
         #expect(!out.contains("Page shortened."))
     }
+
+    // MARK: - Fix round 2 regressions
+
+    @Test func truncatesTextWithHeavyEscapingWithinBudget() throws {
+        let hugeText = String(repeating: "a & b ", count: 8_000)
+        let out = try simplify("<div>\(hugeText)<span>x</span></div>", budget: 20_000)
+        #expect(out.utf8.count <= 20_000 + 2_000)
+        #expect(out.contains("Page shortened."))
+    }
+
+    @Test func truncationNeverSplitsAMultibyteCharacter() throws {
+        let hugeText = String(repeating: "é€", count: 8_000)
+        let out = try simplify("<div>\(hugeText)<span>x</span></div>", budget: 20_000)
+        #expect(!out.contains("\u{FFFD}"))
+    }
+
+    @Test func trimsThousandsOfParagraphsInLinearTime() throws {
+        let paragraphs = (0..<5_000).map { "<p>Paragraph \($0) " + String(repeating: "word ", count: 40) + "</p>" }.joined()
+        for wrapper in ["<div><div>\(paragraphs)</div></div>", "<div>Intro<div>\(paragraphs)</div></div>"] {
+            let start = Date()
+            let out = try simplify(wrapper)
+            #expect(Date().timeIntervalSince(start) < 2.0)
+            #expect(out.utf8.count <= PageSimplifier.budget + 2_000)
+        }
+    }
 }
