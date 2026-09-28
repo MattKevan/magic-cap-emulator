@@ -1,6 +1,10 @@
 import Foundation
 import Network
 
+/// A listener transitioned to `.ready` without ever assigning a port — should
+/// not happen for a TCP listener, but `start()` has to resolve to something.
+enum WebProxyError: Error { case noPort }
+
 /// The loopback HTTP server the patched libslirp sends guest port 80 to.
 public final class WebProxy: @unchecked Sendable {
     public static let maxConnections = 8
@@ -8,6 +12,11 @@ public final class WebProxy: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.example.datarover.web-proxy")
     private var listener: NWListener?
     private var connections: [ObjectIdentifier: NWConnection] = [:]
+    /// The in-flight `start()` continuation, confined to `queue` like every
+    /// other piece of mutable state here — resolved exactly once, either by
+    /// the listener reaching `.ready`/`.failed`/`.cancelled`, or by a
+    /// concurrent `stop()`/`start()` pre-empting it.
+    private var pendingStart: CheckedContinuation<UInt16, Error>?
 
     public init(pipeline: ProxyPipeline) { self.pipeline = pipeline }
 
@@ -17,34 +26,65 @@ public final class WebProxy: @unchecked Sendable {
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
         let listener = try NWListener(using: parameters)
         listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
-        // Mutating `listener` here (rather than after `withCheckedThrowingContinuation`
-        // returns) races a concurrent `stop()` on another thread; confine the write to
-        // the serial queue, same as every other touch of this proxy's mutable state.
-        queue.sync { self.listener = listener }
+        listener.stateUpdateHandler = { [weak self] state in self?.handleListenerState(state, listener: listener) }
         return try await withCheckedThrowingContinuation { continuation in
-            var resumed = false
-            listener.stateUpdateHandler = { state in
-                guard !resumed else { return }
-                switch state {
-                case .ready:
-                    resumed = true
-                    continuation.resume(returning: listener.port?.rawValue ?? 0)
-                case .failed(let error):
-                    resumed = true
-                    continuation.resume(throwing: error)
-                default: break
-                }
+            queue.sync {
+                // A listener (or start() call) already in flight is superseded
+                // by this one; fail it rather than leaving it to hang.
+                self.listener?.cancel()
+                self.failPendingStart(with: CancellationError())
+                self.pendingStart = continuation
+                self.listener = listener
+                listener.start(queue: queue)
             }
-            listener.start(queue: queue)
         }
+    }
+
+    /// Delivered on `queue` — the queue `listener.start` was given — so every
+    /// touch of `pendingStart`/`listener` here is already queue-confined.
+    private func handleListenerState(_ state: NWListener.State, listener: NWListener) {
+        // A state update from a listener this proxy has since moved past
+        // (superseded by a newer `start()`, or already stopped) is stale.
+        guard self.listener === listener else { return }
+        switch state {
+        case .ready:
+            if let port = listener.port {
+                resolvePendingStart(.success(port.rawValue))
+            } else {
+                resolvePendingStart(.failure(WebProxyError.noPort))
+            }
+        case .failed(let error):
+            listener.cancel()
+            self.listener = nil
+            resolvePendingStart(.failure(error))
+        case .cancelled:
+            resolvePendingStart(.failure(CancellationError()))
+        default:
+            break
+        }
+    }
+
+    /// Resolves `pendingStart` at most once; a state update or `stop()`
+    /// arriving after it's already been resolved is a no-op.
+    private func resolvePendingStart(_ result: Result<UInt16, Error>) {
+        guard let continuation = pendingStart else { return }
+        pendingStart = nil
+        continuation.resume(with: result)
+    }
+
+    private func failPendingStart(with error: Error) {
+        resolvePendingStart(.failure(error))
     }
 
     public func stop() {
         // `stop()` is called from the app's own threads, so every touch of
-        // `listener`/`connections` is confined to the serial queue.
+        // `listener`/`pendingStart`/`connections` is confined to the serial
+        // queue — including failing a `start()` still waiting on this
+        // listener, so it throws instead of hanging forever.
         queue.sync {
             listener?.cancel()
             listener = nil
+            failPendingStart(with: CancellationError())
             connections.values.forEach { $0.cancel() }
             connections.removeAll()
         }

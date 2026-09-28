@@ -11,33 +11,57 @@ private struct EchoFetcher: UpstreamFetching {
     }
 }
 
+/// Holds `exchange`'s mutable state. `NWConnection`'s receive and
+/// state-update handlers below are the only code that ever touches it, and
+/// `exchange` gives the connection its own private serial queue (rather than
+/// `.global()`, a concurrent queue) so those handlers never run at the same
+/// time — that confinement, not `Sendable` conformance, is what makes sharing
+/// this plain class across the handlers safe.
+private final class ExchangeState: @unchecked Sendable {
+    var received = Data()
+    var resumed = false
+}
+
 /// Sends raw bytes to the proxy and returns everything until it closes.
 private func exchange(port: UInt16, _ text: String) async throws -> String {
     let connection = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
+    // A private serial queue — not `.global()` — so the receive and
+    // state-update handlers below are never delivered concurrently.
+    let queue = DispatchQueue(label: "com.example.datarover.web-proxy-test-exchange")
     return try await withCheckedThrowingContinuation { continuation in
-        var received = Data()
-        var resumed = false
+        let state = ExchangeState()
+        func resume(_ result: Result<String, Error>) {
+            guard !state.resumed else { return }
+            state.resumed = true
+            continuation.resume(with: result)
+        }
         func read() {
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { data, _, complete, error in
-                if let data { received.append(data) }
+                if let data { state.received.append(data) }
                 if complete || error != nil {
                     connection.cancel()
-                    guard !resumed else { return }
-                    resumed = true
-                    continuation.resume(returning: String(decoding: received, as: UTF8.self))
+                    resume(.success(String(decoding: state.received, as: UTF8.self)))
                 } else { read() }
             }
         }
-        connection.stateUpdateHandler = { state in
-            if case .ready = state {
+        connection.stateUpdateHandler = { nwState in
+            switch nwState {
+            case .ready:
                 connection.send(content: Data(text.utf8), completion: .contentProcessed { _ in read() })
-            } else if case .failed(let error) = state {
-                guard !resumed else { return }
-                resumed = true
-                continuation.resume(throwing: error)
+            case .failed(let error):
+                connection.cancel()
+                resume(.failure(error))
+            case .waiting(let error):
+                // A regression here should fail the test, not hang it.
+                connection.cancel()
+                resume(.failure(error))
+            case .cancelled:
+                resume(.failure(CancellationError()))
+            default:
+                break
             }
         }
-        connection.start(queue: .global())
+        connection.start(queue: queue)
     }
 }
 
@@ -66,5 +90,30 @@ private func exchange(port: UInt16, _ text: String) async throws -> String {
         defer { proxy.stop() }
         let reply = try await exchange(port: port, "BREW /pot HTTP/1.0\r\nHost: e.com\r\n\r\n")
         #expect(reply.hasPrefix("HTTP/1.0 405"))
+    }
+
+    /// Regression: `stop()` racing a still-in-flight `start()` used to leave
+    /// the listener cancelled without ever resuming `start()`'s continuation,
+    /// hanging it forever. Either outcome (`start()` throws or succeeds) is
+    /// fine here — what matters is that it settles quickly instead of hanging.
+    @Test func stoppingDuringStartDoesNotHang() async throws {
+        let proxy = WebProxy(pipeline: ProxyPipeline(fetcher: EchoFetcher(), simplify: { true }))
+        let startTask = Task { try await proxy.start() }
+        proxy.stop()
+        defer { startTask.cancel(); proxy.stop() }
+        let finishedInTime = await withTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                _ = try? await startTask.value
+                return true
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                return false
+            }
+            let first = await group.next() ?? false
+            group.cancelAll()
+            return first
+        }
+        #expect(finishedInTime, "start() should throw or return within 2 seconds of a concurrent stop(), not hang")
     }
 }
