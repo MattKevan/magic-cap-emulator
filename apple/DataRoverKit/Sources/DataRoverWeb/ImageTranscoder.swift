@@ -21,7 +21,8 @@ public enum ImageTranscoder {
               let full = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return placeholder }
         let width = min(full.width, maxWidth)
         let height = max(1, Int((Double(full.height) * Double(width) / Double(full.width)).rounded()))
-        let hadAlpha = ![.none, .noneSkipFirst, .noneSkipLast].contains(full.alphaInfo)
+        let formatHasAlpha = ![.none, .noneSkipFirst, .noneSkipLast].contains(full.alphaInfo)
+        let hadAlpha = formatHasAlpha && hasTransparentPixel(full, width: width, height: height)
 
         guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
                                       bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
@@ -42,6 +43,23 @@ public enum ImageTranscoder {
         CGImageDestinationAddImage(destination, flat, properties)
         guard CGImageDestinationFinalize(destination) else { return placeholder }
         return TranscodedImage(data: out as Data, contentType: useGIF ? "image/gif" : "image/jpeg")
+    }
+
+    /// Whether any pixel of `image`, rendered at `width`×`height`, is not fully opaque.
+    /// The format can *declare* an alpha channel (e.g. a plain RGBA photo) without any
+    /// pixel actually using it, so this renders and inspects the real alpha bytes rather
+    /// than trusting `CGImageAlphaInfo` alone.
+    private static func hasTransparentPixel(_ image: CGImage, width: Int, height: Int) -> Bool {
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
+                                      bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let base = context.data else { return true }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let bytes = base.bindMemory(to: UInt8.self, capacity: width * height * 4)
+        for pixel in 0..<(width * height) {
+            if bytes[pixel * 4 + 3] < 255 { return true }
+        }
+        return false
     }
 
     /// Distinct RGB colours in the bitmap, counting no higher than `limit`.

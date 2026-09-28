@@ -30,6 +30,22 @@ import UniformTypeIdentifiers
         return (type as String, image.width, image.height)
     }
 
+    /// RGB of one pixel in the decoded image, via a fresh RGBX bitmap so the caller
+    /// need not care about the source format's own byte layout.
+    private func pixel(_ data: Data, x: Int, y: Int) -> (r: UInt8, g: UInt8, b: UInt8)? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+        let width = image.width, height = image.height
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
+                                      bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue),
+              let base = context.data else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let bytes = base.bindMemory(to: UInt8.self, capacity: width * height * 4)
+        let offset = (y * width + x) * 4
+        return (bytes[offset], bytes[offset + 1], bytes[offset + 2])
+    }
+
     @Test func shrinksPhotosToJPEG() throws {
         let png = try #require(encode(photo(width: 1000, height: 500), as: .png))
         let out = ImageTranscoder.transcode(png)
@@ -48,6 +64,22 @@ import UniformTypeIdentifiers
         #expect(out.contentType == "image/gif")
         let info = try #require(decoded(out.data))
         #expect(info.width == 64 && info.height == 32)
+        let flattened = try #require(pixel(out.data, x: 48, y: 16))   // was transparent; must be white now
+        #expect(flattened.r >= 250 && flattened.g >= 250 && flattened.b >= 250)
+    }
+
+    @Test func shrinksOpaqueRGBAPhotosToJPEG() throws {
+        // An RGBA-format image (alpha channel present) that is nonetheless fully
+        // opaque everywhere must still be treated as a photo, not forced to GIF.
+        let context = CGContext(data: nil, width: 1000, height: 500, bitsPerComponent: 8, bytesPerRow: 0,
+                                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        for x in 0..<1000 {   // a gradient has far more than 256 colours
+            context.setFillColor(red: CGFloat(x) / 1000, green: 0.5, blue: CGFloat(x % 97) / 97, alpha: 1)
+            context.fill(CGRect(x: x, y: 0, width: 1, height: 500))
+        }
+        let png = try #require(encode(context.makeImage()!, as: .png))
+        let out = ImageTranscoder.transcode(png)
+        #expect(out.contentType == "image/jpeg")
     }
 
     @Test func decodesWebP() throws {
