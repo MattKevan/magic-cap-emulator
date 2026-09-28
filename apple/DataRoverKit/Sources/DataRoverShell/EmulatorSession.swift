@@ -202,6 +202,10 @@ public final class EmulatorSession: ObservableObject {
     /// sheet), or the guest never answers the PCLink request.
     public func installPackage(_ url: URL) {
         guard handle != nil, !installing else { return }
+        switch webBrowserSetup {
+        case .downloading, .installing: return
+        default: break
+        }
         let packagesDir = self.packagesDir
         Task { @MainActor [weak self] in
             let data: Data
@@ -246,6 +250,7 @@ public final class EmulatorSession: ObservableObject {
     public func installWebBrowser() {
         guard webBrowserSetup != .downloading, !installing else { return }
         webBrowserSetup = .downloading
+        packageMessage = "Downloading Web Browser…"
         let directory = URL(fileURLWithPath: packagesDir).appendingPathComponent("Web Browser")
         Task { @MainActor [weak self] in
             var files: [(BrowserPackage, URL)] = []
@@ -254,9 +259,11 @@ public final class EmulatorSession: ObservableObject {
                     files.append((package, try await PackageDownloader().ensure(package, in: directory)))
                 } catch PackageDownloadError.checksumMismatch(let name) {
                     self?.webBrowserSetup = .failed("\(name) didn't match its expected checksum, so it wasn't installed.")
+                    if let self, case .failed(let message) = self.webBrowserSetup { self.packageMessage = message }
                     return
                 } catch {
                     self?.webBrowserSetup = .failed("Couldn't download \(package.name). Check the connection and try again.")
+                    if let self, case .failed(let message) = self.webBrowserSetup { self.packageMessage = message }
                     return
                 }
             }
@@ -264,6 +271,7 @@ public final class EmulatorSession: ObservableObject {
             guard self.networkEnabled else {
                 UserDefaults.standard.set(true, forKey: "datarover.network.enabled")
                 self.webBrowserSetup = .needsRelaunch
+                self.packageMessage = "Guest networking is on. Quit and reopen DataRover, then choose Install Web Browser again."
                 return
             }
             for (package, file) in files {
