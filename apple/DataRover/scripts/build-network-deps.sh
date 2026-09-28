@@ -35,6 +35,13 @@ tar -xf "$SRC/pcre2-$PCRE_VERSION.tar.gz" -C "$SRC/pcre2" --strip-components=1
 tar -xf "$SRC/glib-$GLIB_VERSION.tar.xz" -C "$SRC/glib" --strip-components=1
 tar -xf "$SRC/libslirp-$SLIRP_VERSION.tar.gz" -C "$SRC/libslirp" --strip-components=1
 
+# Local change: transparent port-80 redirect for the web upgrade proxy.
+patch -d "$SRC/libslirp" -p1 --forward --batch \
+  < "$ROOT/apple/DataRover/scripts/patches/libslirp-http-redirect.patch"
+grep -q 'slirp_set_http_redirect_port' "$SRC/libslirp/src/libslirp.h" || {
+  echo "libslirp redirect patch did not apply" >&2; exit 1;
+}
+
 meson_setup_retryable() {
   local build_dir="$1"
   shift

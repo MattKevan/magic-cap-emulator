@@ -1,0 +1,54 @@
+diff -ru libslirp-pristine/src/libslirp.h libslirp-edit/src/libslirp.h
+--- a/src/libslirp.h	2026-09-22 06:46:45
++++ b/src/libslirp.h	2026-09-28 16:41:12
+@@ -364,6 +364,12 @@
+ int slirp_remove_guestfwd(Slirp *slirp, struct in_addr guest_addr,
+                           int guest_port);
+ 
++/* Redirect guest TCP connections to port 80, for any destination, to host
++ * 127.0.0.1:port. 0 disables. Other ports and protocols are unchanged. */
++#define SLIRP_HAS_HTTP_REDIRECT 1
++SLIRP_EXPORT
++void slirp_set_http_redirect_port(Slirp *slirp, uint16_t port);
++
+ /* Return a human-readable state of the slirp stack */
+ SLIRP_EXPORT
+ char *slirp_connection_info(Slirp *slirp);
+diff -ru libslirp-pristine/src/slirp.c libslirp-edit/src/slirp.c
+--- a/src/slirp.c	2026-09-22 06:46:45
++++ b/src/slirp.c	2026-09-28 16:41:21
+@@ -1741,3 +1741,8 @@
+                     (unsigned long)len);
+     }
+ }
++
++void slirp_set_http_redirect_port(Slirp *slirp, uint16_t port)
++{
++    slirp->http_redirect_port = port;
++}
+diff -ru libslirp-pristine/src/slirp.h libslirp-edit/src/slirp.h
+--- a/src/slirp.h	2026-09-22 06:46:45
++++ b/src/slirp.h	2026-09-28 16:41:14
+@@ -160,6 +160,7 @@
+     int if_mru;
+ 
+     bool disable_host_loopback;
++    uint16_t http_redirect_port;
+ 
+     uint32_t mfr_id;
+     uint8_t oob_eth_addr[ETH_ALEN];
+diff -ru libslirp-pristine/src/tcp_subr.c libslirp-edit/src/tcp_subr.c
+--- a/src/tcp_subr.c	2026-09-22 06:46:45
++++ b/src/tcp_subr.c	2026-09-28 16:41:17
+@@ -425,6 +425,11 @@
+         if (sotranslate_out(so, &addr) < 0) {
+             return -1;
+         }
++        if (so->slirp->http_redirect_port && addr.ss_family == AF_INET &&
++            ((struct sockaddr_in *)&addr)->sin_port == htons(80)) {
++            ((struct sockaddr_in *)&addr)->sin_addr = loopback_addr;
++            ((struct sockaddr_in *)&addr)->sin_port = htons(so->slirp->http_redirect_port);
++        }
+ 
+         /* We don't care what port we get */
+         ret = connect(s, (struct sockaddr *)&addr, sockaddr_size(&addr));
