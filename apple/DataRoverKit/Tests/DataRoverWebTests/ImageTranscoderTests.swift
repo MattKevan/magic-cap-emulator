@@ -113,4 +113,33 @@ import UniformTypeIdentifiers
         #expect(cache.image(for: "http://e.com/a.png") == image)
         #expect(cache.image(for: "http://e.com/b.png") == nil)
     }
+
+    /// A flat grey PNG of the given size, drawn in 8-bit greyscale to keep
+    /// the test's own memory use down (it still compresses to a few KB).
+    private func flatPNG(width: Int, height: Int) throws -> Data {
+        let context = try #require(CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                             space: CGColorSpaceCreateDeviceGray(),
+                                             bitmapInfo: CGImageAlphaInfo.none.rawValue))
+        context.setFillColor(gray: 0.5, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let image = try #require(context.makeImage())
+        return try #require(encode(image, as: .png))
+    }
+
+    @Test func capsVeryTallImagesAtAThousandPixels() throws {
+        let out = ImageTranscoder.transcode(try flatPNG(width: 480, height: 40_000))
+        let info = try #require(decoded(out.data))
+        #expect(info.height <= ImageTranscoder.maxHeight)
+        #expect(info.width <= ImageTranscoder.maxWidth && info.width >= 1)
+        #expect(info.height == 1000 && info.width == 12)
+    }
+
+    @Test func refusesSourcesOverThePixelLimitQuickly() throws {
+        // 7,000 x 7,000 = 49 megapixels, over the 40-megapixel limit.
+        let png = try flatPNG(width: 7_000, height: 7_000)
+        let start = Date()
+        let out = ImageTranscoder.transcode(png)
+        #expect(out == TranscodedImage(data: ImageTranscoder.placeholderGIF, contentType: "image/gif"))
+        #expect(Date().timeIntervalSince(start) < 0.5)
+    }
 }
