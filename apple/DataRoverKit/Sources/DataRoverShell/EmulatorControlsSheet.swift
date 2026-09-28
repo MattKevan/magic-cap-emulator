@@ -25,6 +25,18 @@ public struct EmulatorControlsSheet: View {
                     Button("Load package…", systemImage: "shippingbox") { loadPackage() }
                 }
                 Section {
+                    Toggle("Sync date and time with host", isOn: $session.syncHostClock)
+                    Text("Uses the host’s local date and time on launch and resume, including saved states.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    if !session.clockMessage.isEmpty {
+                        Text(session.clockMessage).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Toggle("Mirror host battery", isOn: $session.mirrorHostBattery)
+                    Text("Matches the host’s battery level and external power. Magic Cap may show low-battery warnings when the host charge is low.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    if !session.batteryMessage.isEmpty {
+                        Text(session.batteryMessage).font(.footnote).foregroundStyle(.secondary)
+                    }
                     Toggle("Guest networking", isOn: $networkEnabled)
                     Text("Enables the guest’s emulated Ethernet and an HTTPS proxy through the host. Takes effect the next time you launch DataRover.")
                         .font(.footnote).foregroundStyle(.secondary)

@@ -7569,8 +7569,8 @@ HEADER_SEARCH_PATHS = (
 					"-lresolv",
 					"-liconv",
 					"-lm",
-					Foundation,
-					CoreFoundation,
+					"-framework Foundation",
+					"-framework CoreFoundation",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover;
 				SDKROOT = iphoneos;
@@ -8346,8 +8346,8 @@ HEADER_SEARCH_PATHS = (
 					"-lresolv",
 					"-liconv",
 					"-lm",
-					Foundation,
-					CoreFoundation,
+					"-framework Foundation",
+					"-framework CoreFoundation",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.DataRover;
 				SDKROOT = iphoneos;

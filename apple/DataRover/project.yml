@@ -460,10 +460,8 @@ targets:
           - -lresolv
           - -liconv
           - -lm
-          - -framework
-          - Foundation
-          - -framework
-          - CoreFoundation
+          - "-framework Foundation"
+          - "-framework CoreFoundation"
           - "-framework CoreMIDI"
     sources:
       - path: App/AppIcon.icon

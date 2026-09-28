@@ -116,3 +116,22 @@ public func coreAudioRead(_ handle: UnsafeMutableRawPointer, into samples: Unsaf
 public func coreAudioClear(_ handle: UnsafeMutableRawPointer) {
     datarover_audio_clear(handle)
 }
+
+/// Unknown battery information releases the host override rather than reporting 0%.
+public func coreSetHostBattery(_ handle: UnsafeMutableRawPointer, battery: HostBattery?) {
+    datarover_set_host_battery(handle, Int32(battery?.percentage ?? -1), battery?.externalPower == true ? 1 : 0)
+}
+
+/// Calendar time is local wall time; hardware timers remain in emulated time.
+public func coreSetHostClock(_ handle: UnsafeMutableRawPointer, enabled: Bool, date: Date = Date()) {
+    guard enabled else {
+        datarover_set_host_clock(handle, 0, 0)
+        return
+    }
+    guard let milliseconds = HostClock.localMilliseconds(for: date) else { return }
+    datarover_set_host_clock(handle, 1, milliseconds)
+}
+
+public func coreHostClockStatus(_ handle: UnsafeMutableRawPointer) -> Int {
+    Int(datarover_host_clock_status(handle))
+}

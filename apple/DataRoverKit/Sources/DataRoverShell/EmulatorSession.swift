@@ -19,6 +19,21 @@ public final class EmulatorSession: ObservableObject {
     @Published public private(set) var packageMessage = ""
     @Published public private(set) var networkMessage = "Network bridge off"
     @Published public private(set) var audioMessage = ""
+    @Published public private(set) var batteryMessage = ""
+    @Published public var mirrorHostBattery = UserDefaults.standard.object(forKey: "datarover.battery.host") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(mirrorHostBattery, forKey: "datarover.battery.host")
+            updateHostSync()
+        }
+    }
+    @Published public private(set) var clockMessage = ""
+    @Published public var syncHostClock = UserDefaults.standard.object(forKey: "datarover.clock.host") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(syncHostClock, forKey: "datarover.clock.host")
+            updateHostSync()
+        }
+    }
+    private var hostSync: HostSyncController?
     /// Platform services the host supplies (see `HostHooks`).
     public let hooks: HostHooks
     private let packagesDir: String
@@ -44,6 +59,12 @@ public final class EmulatorSession: ObservableObject {
                 if let handle {
                     coreSetPaused(handle, paused: self.isPaused)
                     self.startHostBridges(handle)
+                    self.hostSync = HostSyncController(handle: handle, batteryEnabled: self.mirrorHostBattery,
+                                                      clockEnabled: self.syncHostClock, active: !self.isPaused) { [weak self] battery, clock in
+                        self?.batteryMessage = battery
+                        self?.clockMessage = clock
+                    }
+                    self.updateHostSync()
                 }
             }
         }
@@ -95,8 +116,16 @@ public final class EmulatorSession: ObservableObject {
         let paused = !foreground || menuVisible
         guard paused != isPaused else { return }
         isPaused = paused
+        updateHostSync()
         if let handle { coreSetPaused(handle, paused: paused) }
         if paused { audioOutput?.stop() } else if audioOutput?.start() == false { audioMessage = "Speaker playback is unavailable" }
+    }
+
+    private func updateHostSync() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.hostSync?.update(batteryEnabled: self.mirrorHostBattery, clockEnabled: self.syncHostClock, active: !self.isPaused)
+        }
     }
 
     public func saveNow() {
@@ -129,6 +158,7 @@ public final class EmulatorSession: ObservableObject {
         guard let handle else { return }
         audioOutput?.stop()
         coreRestart(handle)
+        updateHostSync()
         if !isPaused, audioOutput?.start() == false { audioMessage = "Speaker playback is unavailable" }
     }
 
@@ -181,6 +211,7 @@ public final class EmulatorSession: ObservableObject {
     }
 
     deinit {
+        hostSync = nil
         proxy?.stop()
         audioOutput?.stop()
         coreDestroy(handle)

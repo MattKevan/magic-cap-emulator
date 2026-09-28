@@ -216,7 +216,38 @@ counter by elapsed host time on a warm boot. Full checkpoint restore currently
 restores the counter as saved, so time spent paused is not added. Setting the
 Magic Cap calendar to the iPhone date requires identifying the guest calendar
 base/setting interface; directly writing Unix seconds into the RTC is wrong.
-Absolute phone-clock synchronization is not implemented in this change.
+
+## Host clock and battery
+
+Two settings under Bridges in the controls sheet, both on by default and kept in
+`UserDefaults` (`datarover.clock.host`, `datarover.battery.host`):
+
+- **Sync date and time with host** sends the host's local wall time on launch,
+  on resume and when the host clock or time zone jumps. The core does not touch
+  the RTC or any timer. It maps a small host-owned callback at `0x01000000` and
+  appends it to Magic Cap's own user run queue (`0x108b4`) while the CPU is in
+  the idle loop. The callback calls the ROM's calendar setter (`0x13d37804`,
+  identified from the SDK), which updates the saved calendar offset and posts
+  the guest's clock-change notification. Eleven ROM words are checked first;
+  any other ROM reports "unavailable" rather than writing guessed addresses.
+  Save, pause, restart and shutdown wait for a queued callback to finish, for
+  at most five seconds. If the guest stops draining its run queue (for example,
+  it powered itself off), the core disables the callback, lets those
+  operations proceed, and retries at the next idle point. A checkpoint may
+  therefore hold a disabled entry. The callback is reinstalled after restore,
+  before the guest runs, so that entry is harmless.
+- **Mirror host battery** reads the host's main battery every 15 seconds while
+  running and on resume. The driver's `HOST_BATTERY` input maps 0–100% onto the
+  ROM's calibration range and overrides the AC-adapter state. The synthetic
+  charger stays idle while mirroring, and the backup cell always reads healthy.
+  A host with no battery (a desktop Mac, the simulator) releases the override
+  instead of reporting 0%. A low host battery triggers Magic Cap's own
+  low-battery warnings.
+
+Tests: `../mame/src/libdatarover/tests/host_clock.cpp` (bridge protocol, a
+standalone `clang++ -std=c++20` build), `host_battery.cpp` and `power_wake.cpp`
+(stalled clock update) through `tools/test_core_host_battery.sh` and
+`tools/test_core_power_wake.sh`.
 
 ## Validation
 
@@ -306,3 +337,29 @@ three-second recovery now reaches a cold boot while preserving the original
 checkpoint and NVRAM as backups. This verifies recovery from that damaged
 snapshot, not that every legacy snapshot is repairable. The shared code change
 has been built and tested on macOS; iOS device verification remains separate.
+
+## Guest power-off and tap to wake
+
+Magic Cap powers itself down after inactivity, and when the power button is
+pressed. It removes Dino VCC (`0x10c001c4` bit 0) and the R3900 halts at
+`0x13c3b1c8`, just after the power-control store. On the hardware only the power
+button wakes it; the shells have no power button, so a powered-down guest
+looked frozen: the last frame stayed on screen and taps reached the pen input
+but nothing ran.
+
+All five `.stuck-<timestamp>` checkpoints found in the macOS container
+(26–27 September) were in this state (`POWER_CONTROL=0x60002408`, CPU halted),
+not a scheduler hang. The stuck-restore recovery had been cold-booting them
+because the first tap didn't change the frame within three seconds.
+
+The core now treats a pen-down on a powered-down guest as a 200 ms power
+button press and swallows the rest of that stroke. A wake disarms stuck-restore
+recovery, and the recovery now checks only the first touch after a restore.
+Before this change, every later touch on an inert screen area could cold boot
+the guest. After waking, Magic Cap shows "Cleaning up…" for several seconds and
+ignores touches, then returns to the screen it was showing.
+
+`../mame/src/libdatarover/tests/power_wake.cpp` covers a live wake, a wake from a
+restored powered-down checkpoint, and inert taps after that restore. Run it with
+`tools/test_core_power_wake.sh` (same environment variables as the host battery
+runner).

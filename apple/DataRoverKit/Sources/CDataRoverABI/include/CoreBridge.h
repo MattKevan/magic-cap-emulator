@@ -47,6 +47,10 @@ int datarover_install_package_named(void * _Nullable machine,
 int datarover_install_progress(void * _Nullable machine);
 
 
+void datarover_set_host_clock(void * _Nullable machine, int enabled, int64_t local_unix_milliseconds);
+// 0 disabled, 1 waiting for guest, 2 synchronized, -1 unsupported guest state/ROM.
+int datarover_host_clock_status(void * _Nullable machine);
+
 // Thread-safe controls; changes are applied by the emulation worker.
 void datarover_set_option(void * _Nullable machine, int side, int pressed);
 void datarover_set_paused(void * _Nullable machine, int paused);
@@ -59,6 +63,8 @@ void datarover_restart(void * _Nullable machine);
 size_t datarover_audio_read(void * _Nullable machine, int16_t * _Nullable samples,
                             size_t frame_capacity);
 void datarover_audio_clear(void * _Nullable machine);
+// A negative percentage releases the host override. Applied on the worker.
+void datarover_set_host_battery(void * _Nullable machine, int percentage, int external_power);
 // 0: disabled, 1: provider initialized, -1: requested provider unavailable.
 int datarover_network_status(void * _Nullable machine);
 
