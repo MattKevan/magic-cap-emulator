@@ -23,6 +23,7 @@ typedef struct datarover_create_options {
     uint32_t struct_size;
     int32_t network_enabled;
     int32_t audio_output_enabled;
+    int32_t http_redirect_port;
 } datarover_create_options;
 
 const uint8_t * _Nullable datarover_framebuffer_bytes(void * _Nullable machine);

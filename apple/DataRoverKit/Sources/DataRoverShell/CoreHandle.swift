@@ -16,11 +16,14 @@ public enum PenPhase {
 
 /// Create a core handle. Returns nil when the fork returns NULL
 /// (boot failure). Caller owns the handle; destroy with `coreDestroy`.
-public func coreCreate(nvram: String, cfg: String, rom: String, networkEnabled: Bool) -> UnsafeMutableRawPointer? {
+/// `httpRedirectPort` sends guest TCP port 80 to that loopback port; 0 is off.
+public func coreCreate(nvram: String, cfg: String, rom: String, networkEnabled: Bool,
+                       httpRedirectPort: UInt16 = 0) -> UnsafeMutableRawPointer? {
     var options = datarover_create_options(
         struct_size: UInt32(MemoryLayout<datarover_create_options>.size),
         network_enabled: networkEnabled ? 1 : 0,
-        audio_output_enabled: 1
+        audio_output_enabled: 1,
+        http_redirect_port: Int32(httpRedirectPort)
     )
     return withUnsafePointer(to: &options) { optionsPointer in
         datarover_create_with_options(nvram, cfg, rom, optionsPointer)
