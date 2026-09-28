@@ -52,11 +52,11 @@ public enum RequestParser {
 
         var target = parts[1]
         var host = hostHeader
-        if let absolute = URL(string: target), let scheme = absolute.scheme?.lowercased(),
-           scheme == "http", let authority = absolute.host {
-            host = absolute.port.map { "\(authority):\($0)" } ?? authority
-            let path = absolute.path.isEmpty ? "/" : absolute.path
-            target = path + (absolute.query.map { "?\($0)" } ?? "")
+        if let components = URLComponents(string: target), let scheme = components.scheme?.lowercased(),
+           scheme == "http", let authority = components.host {
+            host = components.port.map { "\(authority):\($0)" } ?? authority
+            let path = components.percentEncodedPath.isEmpty ? "/" : components.percentEncodedPath
+            target = path + (components.percentEncodedQuery.map { "?\($0)" } ?? "")
         }
         guard target.hasPrefix("/"), let rawHost = host, let normalized = normalizeHost(rawHost) else {
             return .invalid(status: 400)

@@ -25,6 +25,17 @@ import Testing
         #expect(r.target == "/a")
     }
 
+    @Test func preservesPercentEncodingInAbsoluteForm() throws {
+        let r = try request("GET http://example.com/a%20b%2Fc?q=%41 HTTP/1.0\r\n\r\n")
+        #expect(r.host == "example.com")
+        #expect(r.target == "/a%20b%2Fc?q=%41")
+    }
+
+    @Test func preservesPercentEncodingInOriginForm() throws {
+        let r = try request("GET /a%20b HTTP/1.0\r\nHost: e.com\r\n\r\n")
+        #expect(r.target == "/a%20b")
+    }
+
     @Test func normalizesHostPortCaseAndTrailingDot() throws {
         #expect(try request("GET / HTTP/1.0\r\nHost: Example.COM:80\r\n\r\n").host == "example.com")
         #expect(try request("GET / HTTP/1.0\r\nHost: example.com.\r\n\r\n").host == "example.com")
