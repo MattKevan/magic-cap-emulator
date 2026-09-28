@@ -33,6 +33,10 @@ public final class ProxyPipeline: Sendable {
         } catch UpstreamError.tooLarge {
             return Self.errorPage(status: 502, reason: "Bad Gateway", title: "Page too large",
                                   detail: "The page is too large to load.", url: requestURL)
+        } catch UpstreamError.insecure {
+            return Self.errorPage(status: 502, reason: "Bad Gateway", title: "Couldn't make a secure connection",
+                                  detail: "The site's certificate or secure connection failed, so the page wasn't loaded.",
+                                  url: requestURL)
         } catch UpstreamError.unreachable(let message) {
             return Self.errorPage(status: 502, reason: "Bad Gateway", title: "Couldn't load the page",
                                   detail: message, url: requestURL)

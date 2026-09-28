@@ -145,6 +145,10 @@ private final class Recorder: @unchecked Sendable {
             .respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
         #expect(down.status == 502 && text(down).contains("The server is down."))
         #expect(text(down).contains("http://e.com/"))
+        let insecure = await pipeline { _ in throw UpstreamError.insecure("e.com") }
+            .respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
+        #expect(insecure.status == 502 && text(insecure).contains("secure connection"))
+        #expect(text(insecure).contains("http://e.com/"))
     }
 
     @Test func sniffsHTMLPastLeadingBOM() async {

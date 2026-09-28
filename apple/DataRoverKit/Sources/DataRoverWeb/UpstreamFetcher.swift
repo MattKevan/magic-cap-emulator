@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 public struct UpstreamResponse: Equatable, Sendable {
     public var status: Int
@@ -14,6 +15,9 @@ public enum UpstreamError: Error, Equatable {
     case forbidden
     case tooLarge
     case unreachable(String)
+    /// HTTPS failed its certificate or handshake checks. The host is named;
+    /// the proxy never retries these over plain HTTP.
+    case insecure(String)
 }
 
 public protocol UpstreamFetching: Sendable {
@@ -26,14 +30,24 @@ public final class UpstreamFetcher: UpstreamFetching {
     public static let userAgent =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
 
-    private static let tlsFailures: Set<URLError.Code> = [
+    /// Certificate and handshake failures. Anyone on the network can cause
+    /// these, so they end the request instead of downgrading it to HTTP.
+    private static let insecureFailures: Set<URLError.Code> = [
         .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate,
         .serverCertificateNotYetValid, .serverCertificateHasUnknownRoot, .clientCertificateRejected,
-        .cannotConnectToHost,
+        .clientCertificateRequired,
     ]
+
+    /// HTTPS could not connect at all, which is how an HTTP-only site looks.
+    /// Only these retry over plain HTTP, and only for hosts not yet seen
+    /// answering over HTTPS.
+    private static let unreachableOverHTTPS: Set<URLError.Code> = [.cannotConnectToHost, .timedOut]
 
     private let session: URLSession
     private let policy: @Sendable (String) -> Bool
+    /// Hosts that have answered over HTTPS in this session. A later failure
+    /// to connect to one of them is an outage or an attack, not an HTTP-only site.
+    private let secureHosts = Mutex<Set<String>>([])
 
     public init(configuration: URLSessionConfiguration = .ephemeral,
                 policy: @escaping @Sendable (String) -> Bool = { DestinationPolicy.allows($0) }) {
@@ -54,8 +68,15 @@ public final class UpstreamFetcher: UpstreamFetching {
         let hostName = request.host.split(separator: ":").first.map(String.init) ?? request.host
         guard policy(hostName) else { throw UpstreamError.forbidden }
         do {
-            return try await load(request, scheme: "https")
-        } catch let error as URLError where Self.tlsFailures.contains(error.code) {
+            let response = try await load(request, scheme: "https")
+            secureHosts.withLock { _ = $0.insert(request.host) }
+            return response
+        } catch let error as URLError where Self.insecureFailures.contains(error.code) {
+            throw UpstreamError.insecure(request.host)
+        } catch let error as URLError where Self.unreachableOverHTTPS.contains(error.code) {
+            guard !secureHosts.withLock({ $0.contains(request.host) }) else {
+                throw UpstreamError.unreachable(error.localizedDescription)
+            }
             return try await load(request, scheme: "http")
         }
     }
@@ -86,7 +107,8 @@ public final class UpstreamFetcher: UpstreamFetching {
         let response: URLResponse
         do {
             (asyncBytes, response) = try await session.bytes(for: urlRequest, delegate: NoRedirects())
-        } catch let error as URLError where Self.tlsFailures.contains(error.code) && scheme == "https" {
+        } catch let error as URLError where scheme == "https"
+                    && (Self.insecureFailures.contains(error.code) || Self.unreachableOverHTTPS.contains(error.code)) {
             throw error
         } catch let error as URLError {
             throw UpstreamError.unreachable(error.localizedDescription)

@@ -18,7 +18,8 @@ network failure does not prevent the emulator from starting.
 
 ## Web Browser 4.0 and the web proxy
 
-**Install Web Browser** in the DataRover controls downloads Web Browser 4.0,
+**Install Web Browser** in the DataRover controls (the General Magic logo; on
+the Mac also File > Install Web Browser…) downloads Web Browser 4.0,
 MagicJavaScript and the EtherLink III driver from joshcarter.com, checks each
 against a pinned SHA-256, turns guest networking on (relaunch once), and sends
 the packages through the Storeroom computer. Nothing is bundled with the app.
@@ -26,8 +27,12 @@ the packages through the Storeroom computer. Nothing is bundled with the app.
 The guest browser has no TLS. A pinned patch
 (`apple/DataRover/scripts/patches/libslirp-http-redirect.patch`) makes
 libslirp send every guest TCP connection to port 80 to a loopback proxy in the
-app. The proxy fetches the page over HTTPS (plain HTTP only if TLS fails),
-rewrites `https://` links, redirects and cookies for the guest, and serves
+app. The proxy fetches the page over HTTPS. It retries over plain HTTP only
+when HTTPS cannot connect at all (connection refused or timed out), and never
+for a host that has already answered over HTTPS in this session. A certificate
+or TLS handshake failure shows an error page instead, because anyone on the
+network can cause one and a plaintext retry would expose the guest's cookies
+and form data. The proxy then rewrites `https://` links, redirects and cookies for the guest, and serves
 Windows-1252 text. With **Simplify pages** on, it also removes scripts, styles
 and embedded media, converts images to GIF or JPEG at most 480 pixels wide,
 limits pages to about 150 KB, and offers a Reader view link on every page.

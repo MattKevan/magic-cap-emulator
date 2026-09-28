@@ -30,12 +30,39 @@ extension StubbedNetworkTests {
         #expect(sent.value(forHTTPHeaderField: "User-Agent") == UpstreamFetcher.userAgent)
     }
 
-    @Test func fallsBackToHTTPOnlyWhenTLSFails() async throws {
-        StubURLProtocol.replies = ["https://old.example/": .failure(.secureConnectionFailed),
-                                   "http://old.example/": .response(200, [:], Data("retro".utf8))]
-        let response = try await fetcher().fetch(ProxyRequest(method: "GET", host: "old.example", target: "/"))
-        #expect(response.url.absoluteString == "http://old.example/")
+    // A broken certificate or handshake can be forced by anyone on the
+    // network, so it must never become a plaintext retry carrying cookies.
+    @Test(arguments: [URLError.Code.serverCertificateUntrusted, .serverCertificateHasBadDate,
+                      .serverCertificateNotYetValid, .serverCertificateHasUnknownRoot,
+                      .clientCertificateRejected, .secureConnectionFailed])
+    func `never falls back to HTTP after a certificate or handshake failure`(code: URLError.Code) async throws {
+        StubURLProtocol.replies = ["https://bad-tls.example/": .failure(code),
+                                   "http://bad-tls.example/": .response(200, [:], Data("plaintext".utf8))]
+        await #expect(throws: UpstreamError.insecure("bad-tls.example")) {
+            try await fetcher().fetch(ProxyRequest(method: "GET", host: "bad-tls.example", target: "/",
+                                                   headers: [HTTPHeader(name: "Cookie", value: "secret=1")]))
+        }
+        #expect(StubURLProtocol.seen.map { $0.url?.scheme } == ["https"])
+    }
+
+    @Test func `falls back to HTTP when the HTTPS connection times out`() async throws {
+        StubURLProtocol.replies = ["https://slow-tls.example/": .failure(.timedOut),
+                                   "http://slow-tls.example/": .response(200, [:], Data("retro".utf8))]
+        let response = try await fetcher().fetch(ProxyRequest(method: "GET", host: "slow-tls.example", target: "/"))
+        #expect(response.url.absoluteString == "http://slow-tls.example/")
         #expect(response.body == Data("retro".utf8))
+    }
+
+    @Test func `never falls back for a host that has already answered over HTTPS`() async throws {
+        let fetcher = fetcher()
+        StubURLProtocol.replies = ["https://known.example/a": .response(200, [:], Data("secure".utf8))]
+        _ = try await fetcher.fetch(ProxyRequest(method: "GET", host: "known.example", target: "/a"))
+        StubURLProtocol.replies = ["https://known.example/b": .failure(.cannotConnectToHost),
+                                   "http://known.example/b": .response(200, [:], Data("plaintext".utf8))]
+        await #expect(throws: UpstreamError.self) {
+            try await fetcher.fetch(ProxyRequest(method: "GET", host: "known.example", target: "/b"))
+        }
+        #expect(!StubURLProtocol.seen.contains { $0.url?.scheme == "http" })
     }
 
     @Test func fallsBackToHTTPWhenCannotConnectToHost() async throws {
