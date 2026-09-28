@@ -2,6 +2,12 @@ import Foundation
 import Testing
 @testable import DataRoverWeb
 
+/// A tiny reference box for capturing a value from inside a @Sendable
+/// closure without tripping mutable-capture concurrency diagnostics.
+private final class Capture<Value>: @unchecked Sendable {
+    var value: Value?
+}
+
 @Suite(.serialized) struct UpstreamFetcherTests {
     private func fetcher(allow: Bool = true) -> UpstreamFetcher {
         StubURLProtocol.seen = []
@@ -29,6 +35,36 @@ import Testing
         let response = try await fetcher().fetch(ProxyRequest(method: "GET", host: "old.example", target: "/"))
         #expect(response.url.absoluteString == "http://old.example/")
         #expect(response.body == Data("retro".utf8))
+    }
+
+    @Test func fallsBackToHTTPWhenCannotConnectToHost() async throws {
+        StubURLProtocol.replies = ["https://old2.example/": .failure(.cannotConnectToHost),
+                                   "http://old2.example/": .response(200, [:], Data("retro2".utf8))]
+        let response = try await fetcher().fetch(ProxyRequest(method: "GET", host: "old2.example", target: "/"))
+        #expect(response.url.absoluteString == "http://old2.example/")
+        #expect(response.body == Data("retro2".utf8))
+    }
+
+    @Test func preservesHttpInsideRefererQueryValues() async throws {
+        StubURLProtocol.replies = ["https://e.com/s?next=http://o.example/": .response(200, [:], Data())]
+        let request = ProxyRequest(method: "GET", host: "e.com", target: "/s?next=http://o.example/",
+                                   headers: [HTTPHeader(name: "Referer", value: "http://e.com/s?next=http://o.example/")])
+        _ = try await fetcher().fetch(request)
+        let sent = try #require(StubURLProtocol.seen.first)
+        #expect(sent.value(forHTTPHeaderField: "Referer") == "https://e.com/s?next=http://o.example/")
+    }
+
+    @Test func fetchesHostWithPortAndPassesBareHostToPolicy() async throws {
+        StubURLProtocol.seen = []
+        StubURLProtocol.replies = ["https://e.com:8080/x": .response(200, [:], Data())]
+        let seenHost = Capture<String>()
+        let fetcher = UpstreamFetcher(configuration: StubURLProtocol.configuration(), policy: { host in
+            seenHost.value = host
+            return true
+        })
+        let response = try await fetcher.fetch(ProxyRequest(method: "GET", host: "e.com:8080", target: "/x"))
+        #expect(response.url.absoluteString == "https://e.com:8080/x")
+        #expect(seenHost.value == "e.com")
     }
 
     @Test func doesNotFallBackOnHTTPErrors() async throws {
