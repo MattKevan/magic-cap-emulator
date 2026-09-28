@@ -13,6 +13,31 @@ public struct EmulatorControlsSheet: View {
         self.loadPackage = loadPackage
     }
 
+    @ViewBuilder private var webBrowserStatus: some View {
+        switch session.webBrowserSetup {
+        case .idle:
+            Text("Downloads Web Browser 4.0, JavaScript and the Ethernet driver, then installs them.")
+                .font(.footnote).foregroundStyle(.secondary)
+        case .downloading:
+            Text("Downloading…").font(.footnote).foregroundStyle(.secondary)
+        case .needsRelaunch:
+            Text("Guest networking is on. Quit and reopen DataRover, then choose Install Web Browser again.")
+                .font(.footnote)
+        case .installing(let name):
+            Text("Installing \(name). Open the Storeroom computer on the DataRover.").font(.footnote)
+        case .installed:
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Installed. To finish, on the DataRover:").font(.footnote)
+                Text("1. Downtown, open the Internet Center and add a provider.").font(.footnote)
+                Text("2. Add the EtherLink LAN connection with address 10.0.2.15.").font(.footnote)
+                Text("3. On the provider’s locations tab, set home to use EtherLink LAN.").font(.footnote)
+                Text("4. Open Web Browser and go to http://10.0.2.2/").font(.footnote)
+            }
+        case .failed(let message):
+            Text(message).font(.footnote).foregroundStyle(.red)
+        }
+    }
+
     public var body: some View {
         NavigationStack {
             List {
@@ -23,6 +48,19 @@ public struct EmulatorControlsSheet: View {
                         dismiss()
                     }
                     Button("Load package…", systemImage: "shippingbox") { loadPackage() }
+                }
+                Section {
+                    Button("Install Web Browser", systemImage: "globe") {
+                        session.installWebBrowser()
+                        dismiss()   // the guest must run to answer the Storeroom transfer
+                    }
+                    .disabled(session.installing || session.webBrowserSetup == .downloading)
+                    webBrowserStatus
+                    Toggle("Simplify pages", isOn: $session.simplifyPages)
+                    Text("Removes scripts and styles and shrinks images so modern sites fit. Turn off to see pages as sent.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                } header: {
+                    Text("Web browser")
                 }
                 Section {
                     Toggle("Sync date and time with host", isOn: $session.syncHostClock)
