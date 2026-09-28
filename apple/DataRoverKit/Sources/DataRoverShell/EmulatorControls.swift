@@ -88,7 +88,7 @@ public struct EmulatorControls: View {
                     Text(session.clockMessage).font(.footnote).foregroundStyle(.secondary)
                 }
                 Toggle("Mirror host battery", isOn: $session.mirrorHostBattery)
-                Text("Matches the host’s battery level and external power. Magic Cap may show low-battery warnings when the host charge is low.")
+                Text("Matches the host’s battery level and external power. It never drops low enough for Magic Cap to turn off communications.")
                     .font(.footnote).foregroundStyle(.secondary)
                 if !session.batteryMessage.isEmpty {
                     Text(session.batteryMessage).font(.footnote).foregroundStyle(.secondary)

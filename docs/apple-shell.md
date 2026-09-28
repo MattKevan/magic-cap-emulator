@@ -241,8 +241,10 @@ Two settings under Bridges in the controls sheet, both on by default and kept in
   ROM's calibration range and overrides the AC-adapter state. The synthetic
   charger stays idle while mirroring, and the backup cell always reads healthy.
   A host with no battery (a desktop Mac, the simulator) releases the override
-  instead of reporting 0%. A low host battery triggers Magic Cap's own
-  low-battery warnings.
+  instead of reporting 0%. The level never goes below 330 counts (about 35%),
+  just above the ROM's 320-count warning point: below it Magic Cap turns off
+  communications, which would cut guest networking and PCLink transfers
+  whenever the host runs low.
 
 Tests: `../mame/src/libdatarover/tests/host_clock.cpp` (bridge protocol, a
 standalone `clang++ -std=c++20` build), `host_battery.cpp` and `power_wake.cpp`
