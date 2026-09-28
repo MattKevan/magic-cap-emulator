@@ -72,4 +72,21 @@ import Testing
         let elapsed = Date().timeIntervalSince(start)
         #expect(elapsed < 2.0)
     }
+
+    @Test func shortensAnArticleOverBudgetInDocumentOrder() throws {
+        let article = (0..<400).map { "<p>Paragraph \($0) \(sentence)</p>" }.joined()
+        let html = "<html><head><title>Long</title></head><body><div class=\"post-content\">\(article)</div></body></html>"
+        let out = try #require(try ReaderExtractor.extract(html: html, pageURL: page, budget: 20_000))
+        #expect(out.contains("Paragraph 0 "))
+        #expect(!out.contains("Paragraph 399 "))
+        #expect(out.contains("Article shortened. <a href=\"http://blog.example/post?id=4\">Original page</a>"))
+        #expect(TextCoding.windows1252(out, html: true).count <= 20_000)
+    }
+
+    @Test func omitsTheShortenedNoteWithinBudget() throws {
+        let article = (0..<6).map { "<p>\($0) \(String(repeating: sentence, count: 3))</p>" }.joined()
+        let html = "<html><head><title>T</title></head><body><div class=\"post-content\">\(article)</div></body></html>"
+        let out = try #require(try ReaderExtractor.extract(html: html, pageURL: page))
+        #expect(!out.contains("Article shortened."))
+    }
 }

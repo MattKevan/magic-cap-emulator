@@ -58,11 +58,12 @@ import Testing
     @Test func flattensMenusAndStripsPresentationalAttributes() throws {
         let out = try simplify("""
         <nav class="menu"><ul><li><a href="/n">News</a></li><li><a href="/s">Sport</a></li></ul></nav>
-        <p class="x" style="color:red" onclick="go()">Text</p>
+        <p class="x" style="color:red" onclick="go()" data-track="1">Text</p>
         """)
         #expect(!out.contains("<nav"))
         #expect(out.contains("News</a> | <a"))
         #expect(!out.contains("class=") && !out.contains("style=") && !out.contains("onclick"))
+        #expect(!out.contains("data-track"))
     }
 
     @Test func addsTheToolbarAndCharset() throws {
@@ -141,5 +142,41 @@ import Testing
             #expect(Date().timeIntervalSince(start) < 6.0)
             #expect(out.utf8.count <= PageSimplifier.budget + 2_000)
         }
+    }
+
+    // MARK: - Final fix wave: document-order budget
+
+    @Test func budgetKeepsTheArticleNestedInOneOfSeveralTopLevelChildren() throws {
+        // Wikipedia's shape: several top-level <body> children, the whole
+        // article inside one of them, trailing chrome after it.
+        let paragraphs = (0..<400).map { "<p>Paragraph \($0) " + String(repeating: "word ", count: 40) + "</p>" }.joined()
+        let out = try simplify("""
+        <div>Site menu</div><div id="page"><div id="content"><p>Lead with <a href="/lead">a lead link</a>.</p>\(paragraphs)</div></div>
+        <div>Trailing footer</div>
+        """, budget: 20_000)
+        #expect(out.contains("Site menu"))
+        #expect(out.contains("<p>Lead with <a href=\"http://news.example/lead\">a lead link</a>.</p>"))
+        #expect(out.contains("Paragraph 0 "))
+        #expect(!out.contains("Paragraph 399 "))
+        #expect(!out.contains("Trailing footer"))
+        #expect(out.contains("Page shortened."))
+        #expect(TextCoding.windows1252(out, html: true).count <= 20_000)
+    }
+
+    @Test func truncationKeepsStructureAndLinksBeforeTheCut() throws {
+        let hugeText = String(repeating: "word ", count: 8_000)
+        let out = try simplify("<div><p><a href=\"/first\">First</a></p><p>\(hugeText)</p><p><a href=\"/last\">Last</a></p></div>",
+                               budget: 20_000)
+        #expect(out.contains("<p><a href=\"http://news.example/first\">First</a></p><p>word word"))
+        #expect(!out.contains("/last"))
+        #expect(out.contains("Page shortened."))
+    }
+
+    @Test func budgetCountsTheWindows1252BytesActuallySent() throws {
+        // Each CJK character is 3 UTF-8 bytes but 8 bytes once sent as &#NNNNN;.
+        let paragraphs = (0..<400).map { "<p>\($0) " + String(repeating: "漢字", count: 40) + "</p>" }.joined()
+        let out = try simplify("<div>\(paragraphs)</div>", budget: 20_000)
+        #expect(TextCoding.windows1252(out, html: true).count <= 20_000)
+        #expect(out.contains("Page shortened."))
     }
 }

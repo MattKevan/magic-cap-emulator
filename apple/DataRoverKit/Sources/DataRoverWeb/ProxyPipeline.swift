@@ -47,15 +47,23 @@ public final class ProxyPipeline: Sendable {
         let contentType = upstream.headers.first { $0.name.lowercased() == "content-type" }?.value
         let mime = contentType?.split(separator: ";").first.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
             ?? (Self.looksLikeHTML(upstream.body) ? "text/html" : "application/octet-stream")
-        let reason = HTTPURLResponse.localizedString(forStatusCode: upstream.status).capitalized
+        let reason = HTTPStatus.reason(for: upstream.status)
         let enabled = simplify()
+
+        // No Content and Not Modified never carry a body: pass the headers
+        // through as they are rather than generating one.
+        if upstream.status == 204 || upstream.status == 304 {
+            return ProxyResponse(status: upstream.status, reason: reason,
+                                 headers: HeaderRewriter.rewrite(upstream.headers) + [HTTPHeader(name: "Connection", value: "close")],
+                                 body: Data())
+        }
 
         switch mime {
         case "text/html", "application/xhtml+xml":
             let source = TextCoding.decode(upstream.body, contentType: contentType)
             let page: String
             if !enabled {
-                page = HeaderRewriter.downgrade(source)
+                page = HTMLCleaning.setCharset(in: HeaderRewriter.downgrade(source))
             } else if reader, let extracted = try ReaderExtractor.extract(html: source, pageURL: upstream.url) {
                 page = extracted
             } else {

@@ -129,7 +129,7 @@ public final class WebProxy: @unchecked Sendable {
                     self.queue.async { self.send(response, includeBody: request.method != "HEAD", on: connection) }
                 }
             case .invalid(let status):
-                self.send(ProxyPipeline.errorPage(status: status, reason: Self.reason(forStatus: status),
+                self.send(ProxyPipeline.errorPage(status: status, reason: HTTPStatus.reason(for: status),
                                                   title: "Request not understood",
                                                   detail: "The browser sent a request the proxy can't handle."),
                           includeBody: true, on: connection)
@@ -148,18 +148,5 @@ public final class WebProxy: @unchecked Sendable {
     private func close(_ connection: NWConnection) {
         connections.removeValue(forKey: ObjectIdentifier(connection))
         connection.cancel()
-    }
-
-    /// A fixed, ASCII-only status line reason. `HTTPURLResponse.localizedString`
-    /// is localized and can return non-ASCII text, which doesn't belong in an
-    /// HTTP status line.
-    private static func reason(forStatus status: Int) -> String {
-        switch status {
-        case 400: return "Bad Request"
-        case 405: return "Method Not Allowed"
-        case 413: return "Payload Too Large"
-        case 431: return "Request Header Fields Too Large"
-        default: return "Bad Request"
-        }
     }
 }

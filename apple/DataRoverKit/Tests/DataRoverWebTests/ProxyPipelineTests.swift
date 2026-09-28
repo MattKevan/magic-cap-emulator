@@ -209,4 +209,62 @@ private final class Recorder: @unchecked Sendable {
         #expect(wire.hasSuffix("\r\n\r\n"))
         #expect(header(response, "Content-Length") == String(response.body.count))
     }
+
+    // MARK: - Final fix wave
+
+    @Test func usesFixedASCIIReasonPhrases() async {
+        let ok = await pipeline { _ in self.html("<p>x</p>") }
+            .respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
+        #expect(ok.reason == "OK")
+        let missing = await pipeline { _ in
+            UpstreamResponse(status: 404, headers: [HTTPHeader(name: "Content-Type", value: "text/plain")],
+                             body: Data("gone".utf8), url: URL(string: "https://e.com/x")!)
+        }.respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/x"))
+        #expect(missing.reason == "Not Found")
+        #expect(HTTPStatus.reason(for: 308) == "Permanent Redirect")
+        #expect(HTTPStatus.reason(for: 429) == "Too Many Requests")
+        #expect(HTTPStatus.reason(for: 299) == "OK")
+        #expect(HTTPStatus.reason(for: 599) == "Server Error")
+        for status in 100...599 {
+            #expect(HTTPStatus.reason(for: status).allSatisfy { $0.isASCII && !$0.isNewline }, "\(status)")
+        }
+    }
+
+    @Test func keepsMetaRefreshWhenRewritingTheCharset() async {
+        let page = "<html><head><meta charset=\"utf-8\"><meta http-equiv=\"content-TYPE\" content=\"text/html; charset=utf-8\">"
+            + "<meta http-equiv=\"refresh\" content=\"5; url=/next\"></head><body><p>x</p></body></html>"
+        let response = await pipeline { _ in self.html(page) }
+            .respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
+        let out = text(response)
+        #expect(out.contains("http-equiv=\"refresh\""))
+        #expect(!out.lowercased().contains("charset=utf-8") && !out.contains("charset=\"utf-8\""))
+        #expect(out.components(separatedBy: "charset=windows-1252").count == 2)
+    }
+
+    @Test func rewritesTheCharsetDeclarationWhenSimplifyIsOff() async {
+        let page = "<html><head><META CHARSET=\"UTF-8\"><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">"
+            + "<meta http-equiv=\"refresh\" content=\"5\"></head><body><p>Café</p></body></html>"
+        let response = await pipeline(simplify: false) { _ in self.html(page) }
+            .respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
+        let out = text(response)
+        #expect(!out.lowercased().contains("utf-8"))
+        #expect(out.contains("charset=windows-1252"))
+        #expect(out.contains("http-equiv=\"refresh\""))
+        #expect(response.body.contains(0xE9))
+    }
+
+    @Test func passesNoContentAndNotModifiedThroughWithoutABody() async {
+        for (status, reason) in [(204, "No Content"), (304, "Not Modified")] {
+            let response = await pipeline { _ in
+                UpstreamResponse(status: status, headers: [HTTPHeader(name: "Content-Type", value: "text/html"),
+                                                          HTTPHeader(name: "ETag", value: "\"abc\"")],
+                                 body: Data(), url: URL(string: "https://e.com/")!)
+            }.respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
+            #expect(response.status == status)
+            #expect(response.reason == reason)
+            #expect(response.body.isEmpty, "\(status)")
+            #expect(header(response, "ETag") == "\"abc\"")
+            #expect(header(response, "Content-Length") == nil, "\(status)")
+        }
+    }
 }

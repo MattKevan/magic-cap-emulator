@@ -13,14 +13,36 @@ public enum TextCoding {
         0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F,
     ]
 
+    /// The single Windows-1252 byte for `scalar`, or nil when it has none.
+    private static func byte(for scalar: Unicode.Scalar) -> UInt8? {
+        let value = scalar.value
+        if value < 0x80 || (0xA0...0xFF).contains(value) { return UInt8(value) }
+        return high[value]
+    }
+
+    /// How many bytes `scalar` takes in `windows1252(_:html: true)`: one if
+    /// Windows-1252 has it, else the length of its `&#NNNN;` reference.
+    static func encodedLength(_ scalar: Unicode.Scalar) -> Int {
+        if byte(for: scalar) != nil { return 1 }
+        var digits = 1
+        var value = scalar.value
+        while value >= 10 { value /= 10; digits += 1 }
+        return digits + 3
+    }
+
+    /// How many bytes `text` takes once encoded by `windows1252(_:html: true)`.
+    static func encodedLength(_ text: String) -> Int {
+        var length = 0
+        for scalar in text.unicodeScalars { length += encodedLength(scalar) }
+        return length
+    }
+
     public static func windows1252(_ text: String, html: Bool) -> Data {
         var out = Data()
         out.reserveCapacity(text.utf8.count)
         for scalar in text.unicodeScalars {
             let value = scalar.value
-            if value < 0x80 || (0xA0...0xFF).contains(value) {
-                out.append(UInt8(value))
-            } else if let byte = high[value] {
+            if let byte = byte(for: scalar) {
                 out.append(byte)
             } else if html {
                 out.append(contentsOf: Array("&#\(value);".utf8))

@@ -26,7 +26,7 @@ enum HTMLCleaning {
     /// in one traversal) instead of re-querying the DOM for every attribute
     /// on every element, which was quadratic on large pages.
     private static func applyBaseHref(in document: Document) throws {
-        guard let base = try document.select("base[href]").first() else { return }
+        guard let base = try document.getElementsByTag("base").array().first(where: { $0.hasAttr("href") }) else { return }
         let baseHref = try base.attr("href")
         guard !baseHref.isEmpty,
               let resolvedBase = URL(string: baseHref, relativeTo: URL(string: document.getBaseUri())) ?? URL(string: baseHref) else {
@@ -37,9 +37,10 @@ enum HTMLCleaning {
 
     static func rewriteLinks(in document: Document, pageURL: URL) throws {
         try applyBaseHref(in: document)
-        for attribute in ["href", "src", "action"] {
-            for element in try document.select("[\(attribute)]").array() {
-                if element.tagName() == "base" { continue }
+        // One pass over the elements, not `[href]`-style attribute
+        // selectors: see PageSimplifier.removeHeavyAndHidden for why.
+        for element in try document.getAllElements().array() where element.tagName() != "base" {
+            for attribute in ["href", "src", "action"] where element.hasAttr(attribute) {
                 if let url = try downgradedAbsolute(element, attribute: attribute) {
                     try element.attr(attribute, url)
                 } else {
@@ -47,10 +48,10 @@ enum HTMLCleaning {
                 }
             }
         }
-        for form in try document.select("form:not([action])").array() {
+        for form in try document.getElementsByTag("form").array() where !form.hasAttr("action") {
             try form.attr("action", HeaderRewriter.downgrade(pageURL.absoluteString))
         }
-        try document.select("base").remove()
+        try document.getElementsByTag("base").remove()
     }
 
     /// One real source per image, sized for a 480-pixel screen. Run before
@@ -87,9 +88,41 @@ enum HTMLCleaning {
             .min { $0.1 < $1.1 }?.0
     }
 
+    private static let charsetMeta = "<meta http-equiv=\"Content-Type\" content=\"\(TextCoding.htmlContentType)\">"
+
+    /// Replaces the page's charset declarations (`<meta charset>` and a
+    /// Content-Type `http-equiv`) with one for Windows-1252. Other
+    /// `http-equiv` metas, such as refresh, stay.
     static func setCharset(_ document: Document) throws {
-        try document.select("meta[charset], meta[http-equiv]").remove()
-        try document.head()?.prepend("<meta http-equiv=\"Content-Type\" content=\"\(TextCoding.htmlContentType)\">")
+        for meta in try document.getElementsByTag("meta").array() {
+            let equiv = try meta.attr("http-equiv").trimmingCharacters(in: .whitespaces).lowercased()
+            if meta.hasAttr("charset") || equiv == "content-type" { try meta.remove() }
+        }
+        try document.head()?.prepend(charsetMeta)
+    }
+
+    /// `setCharset` for unparsed HTML (simplification off): every `<meta>`
+    /// tag that declares a charset becomes the Windows-1252 declaration.
+    /// One linear regex pass; the page is otherwise left as served.
+    static func setCharset(in html: String) -> String {
+        guard let regex = charsetDeclaration else { return html }
+        let range = NSRange(html.startIndex..., in: html)
+        return regex.stringByReplacingMatches(in: html, range: range,
+                                              withTemplate: NSRegularExpression.escapedTemplate(for: charsetMeta))
+    }
+
+    private static let charsetDeclaration = try? NSRegularExpression(
+        pattern: #"<meta\s[^>]*?(?:\bcharset\s*=|http-equiv\s*=\s*["']?\s*content-type)[^>]*>"#,
+        options: [.caseInsensitive])
+
+    /// Fits the document within `budget` bytes as sent, in document order
+    /// (see `HTMLBudget`), and appends `notice` only if anything was cut.
+    static func enforce(budget: Int, on body: Element, in document: Document, notice: String) throws {
+        // The notice serializes a little longer than written (`<hr />`).
+        let reserve = TextCoding.encodedLength(notice) + 16
+        if try HTMLBudget.fit(body, in: document, budget: budget, reserve: reserve) {
+            try body.append(notice)
+        }
     }
 
     static func readerURL(for pageURL: URL) -> String {

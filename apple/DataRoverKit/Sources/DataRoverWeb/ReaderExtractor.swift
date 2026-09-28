@@ -11,7 +11,7 @@ public enum ReaderExtractor {
     private static let allowed: Set<String> = ["p", "h1", "h2", "h3", "h4", "ul", "ol", "li", "blockquote",
                                                "img", "a", "pre", "br", "em", "strong", "b", "i"]
 
-    public static func extract(html: String, pageURL: URL) throws -> String? {
+    public static func extract(html: String, pageURL: URL, budget: Int = PageSimplifier.budget) throws -> String? {
         let document = try SwiftSoup.parse(html, pageURL.absoluteString)
         try document.select("script, style, noscript, nav, footer, aside, form, iframe, svg").remove()
 
@@ -42,8 +42,18 @@ public enum ReaderExtractor {
         }
         guard let (_, bestEntry) = ranked.max(by: { $0.value.score < $1.value.score }),
               bestEntry.score >= minimumScore else { return nil }
-        let best = bestEntry.element
-        let bestScore = bestEntry.score
+        var best = bestEntry.element
+        var bestScore = bestEntry.score
+        // A <section> is part of a larger article. When the best block is
+        // one and its parent also scores well, the parent is the article:
+        // otherwise a long page split into sections (Wikipedia) keeps only
+        // its strongest sections and loses a lead whose infobox links
+        // dilute its score.
+        while best.tagName() == "section", let parent = best.parent(),
+              let parentScore = ranked[ObjectIdentifier(parent)]?.score, parentScore >= bestScore * 0.5 {
+            best = parent
+            bestScore = parentScore
+        }
 
         var kept = [best]
         if let parent = best.parent() {
@@ -59,7 +69,8 @@ public enum ReaderExtractor {
         let output = try SwiftSoup.parse("<html><head><title></title></head><body></body></html>", pageURL.absoluteString)
         try output.title(title)
         let body = output.body()!
-        try body.append("<p><a href=\"\(HeaderRewriter.downgrade(pageURL.absoluteString))\">Original page</a> | "
+        let original = HeaderRewriter.downgrade(pageURL.absoluteString)
+        try body.append("<p><a href=\"\(original)\">Original page</a> | "
                         + "<a href=\"\(HTMLCleaning.startPageURL)\">Start page</a></p><hr>")
         if !title.isEmpty { try body.append("<h1></h1>"); try body.children().last()?.text(title) }
         for element in kept { try body.append(try element.outerHtml()) }
@@ -72,6 +83,8 @@ public enum ReaderExtractor {
         try clean(body)
         try HTMLCleaning.rewriteLinks(in: output, pageURL: pageURL)
         try HTMLCleaning.setCharset(output)
+        try HTMLCleaning.enforce(budget: budget, on: body, in: output,
+                                 notice: "<hr><p>Article shortened. <a href=\"\(original)\">Original page</a></p>")
         return try HTMLCleaning.serialize(output)
     }
 

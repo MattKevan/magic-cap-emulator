@@ -32,4 +32,10 @@ import Testing
         #expect(TextCoding.decode(bom, contentType: "text/html; charset=utf-8") == "café")
         #expect(TextCoding.decode(bom, contentType: nil) == "café")
     }
+
+    @Test func encodedLengthMatchesTheBytesSent() {
+        for text in ["café", "€—“”’…", "漢字", "a\u{0081}b", "𐌲𐌿𐍄", "plain ascii"] {
+            #expect(TextCoding.encodedLength(text) == TextCoding.windows1252(text, html: true).count, "\(text)")
+        }
+    }
 }

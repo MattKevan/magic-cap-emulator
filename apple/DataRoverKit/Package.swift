@@ -20,6 +20,7 @@ let package = Package(
         .target(name: "DataRoverShell", dependencies: ["DataRoverKit", "DataRoverWeb", "CDataRoverABI"],
                 resources: [.process("Resources")]),
         .testTarget(name: "DataRoverKitTests", dependencies: ["DataRoverKit"]),
-        .testTarget(name: "DataRoverWebTests", dependencies: ["DataRoverWeb"]),
+        .testTarget(name: "DataRoverWebTests", dependencies: ["DataRoverWeb", "SwiftSoup"],
+                    resources: [.copy("Fixtures")]),
     ]
 )
