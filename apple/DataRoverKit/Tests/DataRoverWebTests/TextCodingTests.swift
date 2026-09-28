@@ -25,4 +25,11 @@ import Testing
         #expect(TextCoding.decode(page, contentType: "text/html").hasSuffix("café"))
         #expect(TextCoding.decode(Data("café".utf8), contentType: nil) == "café")
     }
+
+    @Test func dropsLeadingBOM() {
+        var bom = Data([0xEF, 0xBB, 0xBF])
+        bom.append(Data("café".utf8))
+        #expect(TextCoding.decode(bom, contentType: "text/html; charset=utf-8") == "café")
+        #expect(TextCoding.decode(bom, contentType: nil) == "café")
+    }
 }

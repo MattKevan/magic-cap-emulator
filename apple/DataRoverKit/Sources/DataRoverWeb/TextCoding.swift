@@ -32,6 +32,10 @@ public enum TextCoding {
     }
 
     public static func decode(_ data: Data, contentType: String?) -> String {
+        dropBOM(decodeRaw(data, contentType: contentType))
+    }
+
+    private static func decodeRaw(_ data: Data, contentType: String?) -> String {
         if let name = charset(in: contentType), let encoding = encoding(named: name),
            let text = String(data: data, encoding: encoding) {
             return text
@@ -45,6 +49,13 @@ public enum TextCoding {
             }
         }
         return String(decoding: data, as: UTF8.self)
+    }
+
+    /// A leading U+FEFF byte-order mark survives decoding as UTF-8 (and some
+    /// declared encodings) as a real character. Left in, it would reach the
+    /// guest as the numeric escape `&#65279;` once re-encoded to windows-1252.
+    private static func dropBOM(_ text: String) -> String {
+        text.hasPrefix("\u{FEFF}") ? String(text.dropFirst()) : text
     }
 
     private static func charset(in contentType: String?) -> String? {

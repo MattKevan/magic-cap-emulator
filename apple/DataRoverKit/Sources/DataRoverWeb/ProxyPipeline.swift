@@ -11,26 +11,34 @@ public final class ProxyPipeline: Sendable {
     }
 
     public func respond(to request: ProxyRequest) async -> ProxyResponse {
+        let requestURL = "http://\(request.host)\(request.target)"
         if request.host == StartPage.host {
             guard request.target == "/" || request.target.hasPrefix("/?") else {
                 return Self.errorPage(status: 404, reason: "Not Found", title: "Page not found",
-                                      detail: "The start page is at http://10.0.2.2/.")
+                                      detail: "The start page is at http://10.0.2.2/.", url: requestURL)
             }
             return Self.text(status: 200, reason: "OK", headers: [], html: StartPage.html())
         }
+        // A guest HEAD is fetched upstream as GET: fetching HEAD itself would
+        // get an empty image body back, transcoding it to the 1x1 placeholder
+        // — the listener (Task 12) drops the body for HEAD, so Content-Length
+        // still matches what a GET would have sent.
+        var upstreamRequest = request
+        if upstreamRequest.method == "HEAD" { upstreamRequest.method = "GET" }
         do {
-            return try transform(await fetcher.fetch(request), reader: request.reader)
+            return try transform(await fetcher.fetch(upstreamRequest), reader: request.reader)
         } catch UpstreamError.forbidden {
             return Self.errorPage(status: 403, reason: "Forbidden", title: "That address isn't allowed",
-                                  detail: "The proxy only visits public websites.")
+                                  detail: "The proxy only visits public websites.", url: requestURL)
         } catch UpstreamError.tooLarge {
             return Self.errorPage(status: 502, reason: "Bad Gateway", title: "Page too large",
-                                  detail: "The page is too large to load.")
+                                  detail: "The page is too large to load.", url: requestURL)
         } catch UpstreamError.unreachable(let message) {
-            return Self.errorPage(status: 502, reason: "Bad Gateway", title: "Couldn't load the page", detail: message)
+            return Self.errorPage(status: 502, reason: "Bad Gateway", title: "Couldn't load the page",
+                                  detail: message, url: requestURL)
         } catch {
             return Self.errorPage(status: 502, reason: "Bad Gateway", title: "Couldn't load the page",
-                                  detail: error.localizedDescription)
+                                  detail: error.localizedDescription, url: requestURL)
         }
     }
 
@@ -38,7 +46,7 @@ public final class ProxyPipeline: Sendable {
         let headers = HeaderRewriter.rewrite(upstream.headers).filter { $0.name.lowercased() != "content-type" }
         let contentType = upstream.headers.first { $0.name.lowercased() == "content-type" }?.value
         let mime = contentType?.split(separator: ";").first.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
-            ?? (upstream.body.first == UInt8(ascii: "<") ? "text/html" : "application/octet-stream")
+            ?? (Self.looksLikeHTML(upstream.body) ? "text/html" : "application/octet-stream")
         let reason = HTTPURLResponse.localizedString(forStatusCode: upstream.status).capitalized
         let enabled = simplify()
 
@@ -66,7 +74,13 @@ public final class ProxyPipeline: Sendable {
             let key = upstream.url.absoluteString
             let image = images.image(for: key) ?? {
                 let fresh = ImageTranscoder.transcode(upstream.body)
-                images.store(fresh, for: key)
+                // An undecodable source (or an empty HEAD body, now moot since
+                // HEAD is fetched as GET) transcodes to the shared placeholder;
+                // never cache that under a real image's URL, or a later fetch
+                // that *would* decode fine is masked by the cached placeholder.
+                if fresh.data != ImageTranscoder.placeholderGIF {
+                    images.store(fresh, for: key)
+                }
                 return fresh
             }()
             return Self.framed(status: 200, reason: "OK", headers: headers, contentType: image.contentType, body: image.data)
@@ -76,10 +90,24 @@ public final class ProxyPipeline: Sendable {
         }
     }
 
-    public static func errorPage(status: Int, reason: String, title: String, detail: String) -> ProxyResponse {
-        text(status: status, reason: reason, headers: [],
+    public static func errorPage(status: Int, reason: String, title: String, detail: String, url: String? = nil) -> ProxyResponse {
+        let urlParagraph = url.map { "<p>\(escape($0))</p>" } ?? ""
+        return text(status: status, reason: reason, headers: [],
              html: "<html><head><title>\(escape(title))</title></head><body><h1>\(escape(title))</h1>"
-                 + "<p>\(escape(detail))</p><p><a href=\"http://10.0.2.2/\">Start page</a></p></body></html>")
+                 + "<p>\(escape(detail))</p>" + urlParagraph
+                 + "<p><a href=\"http://10.0.2.2/\">Start page</a></p></body></html>")
+    }
+
+    /// Whether an untyped body looks like HTML: a leading UTF-8 BOM and any
+    /// ASCII whitespace (both common before `<!DOCTYPE …>` or `<html>`) are
+    /// skipped before testing for the opening `<`.
+    private static func looksLikeHTML(_ body: Data) -> Bool {
+        var bytes = body[...]
+        if bytes.starts(with: [0xEF, 0xBB, 0xBF]) { bytes = bytes.dropFirst(3) }
+        while let first = bytes.first, first == 0x20 || first == 0x09 || first == 0x0D || first == 0x0A {
+            bytes = bytes.dropFirst()
+        }
+        return bytes.first == UInt8(ascii: "<")
     }
 
     private static func text(status: Int, reason: String, headers: [HTTPHeader], html: String) -> ProxyResponse {

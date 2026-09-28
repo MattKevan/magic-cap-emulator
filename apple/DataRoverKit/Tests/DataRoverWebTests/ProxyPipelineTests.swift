@@ -1,10 +1,22 @@
+import CoreGraphics
 import Foundation
+import ImageIO
 import Testing
+import UniformTypeIdentifiers
 @testable import DataRoverWeb
 
 private struct FakeFetcher: UpstreamFetching {
     var result: @Sendable (ProxyRequest) throws -> UpstreamResponse
     func fetch(_ request: ProxyRequest) async throws -> UpstreamResponse { try result(request) }
+}
+
+/// Thread-safe append-only log, for fakes that need to record what they were
+/// called with (or how many times) across the pipeline's async calls.
+private final class Recorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var entries: [String] = []
+    func record(_ entry: String) { lock.lock(); entries.append(entry); lock.unlock() }
+    var all: [String] { lock.lock(); defer { lock.unlock() }; return entries }
 }
 
 @Suite struct ProxyPipelineTests {
@@ -19,6 +31,20 @@ private struct FakeFetcher: UpstreamFetching {
         response.headers.first { $0.name.lowercased() == name.lowercased() }?.value
     }
     private func text(_ response: ProxyResponse) -> String { String(decoding: response.body, as: UTF8.self) }
+
+    /// A tiny, real, decodable image — opaque solid red — as PNG bytes.
+    private func decodablePNG() -> Data {
+        let context = CGContext(data: nil, width: 4, height: 4, bitsPerComponent: 8, bytesPerRow: 0,
+                                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
+        let image = context.makeImage()!
+        let data = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil)!
+        CGImageDestinationAddImage(destination, image, nil)
+        precondition(CGImageDestinationFinalize(destination))
+        return data as Data
+    }
 
     @Test func servesTheStartPage() async {
         let response = await pipeline { _ in throw UpstreamError.forbidden }
@@ -110,12 +136,69 @@ private struct FakeFetcher: UpstreamFetching {
         let forbidden = await pipeline { _ in throw UpstreamError.forbidden }
             .respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
         #expect(forbidden.status == 403 && text(forbidden).contains("isn't allowed"))
+        #expect(text(forbidden).contains("http://e.com/"))
         let big = await pipeline { _ in throw UpstreamError.tooLarge }
             .respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
         #expect(big.status == 502 && text(big).contains("too large"))
+        #expect(text(big).contains("http://e.com/"))
         let down = await pipeline { _ in throw UpstreamError.unreachable("The server is down.") }
             .respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
         #expect(down.status == 502 && text(down).contains("The server is down."))
+        #expect(text(down).contains("http://e.com/"))
+    }
+
+    @Test func sniffsHTMLPastLeadingBOM() async {
+        let body = Data([0xEF, 0xBB, 0xBF]) + Data("<html><body><p>x</p></body></html>".utf8)
+        let response = await pipeline { _ in
+            UpstreamResponse(status: 200, headers: [], body: body, url: URL(string: "https://e.com/")!)
+        }.respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
+        #expect(header(response, "Content-Type") == TextCoding.htmlContentType)
+        #expect(!text(response).contains("&#65279;"))
+    }
+
+    @Test func sniffsHTMLPastLeadingWhitespaceBeforeDoctype() async {
+        let body = Data("\n  <!DOCTYPE html><html><body><p>x</p></body></html>".utf8)
+        let response = await pipeline { _ in
+            UpstreamResponse(status: 200, headers: [], body: body, url: URL(string: "https://e.com/")!)
+        }.respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/"))
+        #expect(header(response, "Content-Type") == TextCoding.htmlContentType)
+        #expect(!text(response).contains("&#65279;"))
+    }
+
+    @Test func headFetchesUpstreamAsGETSoImagesAreRealAndCachedForLaterGETs() async {
+        let recorder = Recorder()
+        let png = decodablePNG()
+        let proxy = pipeline { request in
+            recorder.record(request.method)
+            return UpstreamResponse(status: 200, headers: [HTTPHeader(name: "Content-Type", value: "image/png")],
+                                    body: png, url: URL(string: "https://e.com/a.png")!)
+        }
+        let head = await proxy.respond(to: ProxyRequest(method: "HEAD", host: "e.com", target: "/a.png"))
+        #expect(recorder.all == ["GET"])                              // HEAD forwarded upstream as GET
+        #expect(head.status == 200)
+        #expect(head.body != ImageTranscoder.placeholderGIF)          // a real image, not the placeholder
+
+        let get = await proxy.respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/a.png"))
+        #expect(get.body == head.body)                                // the cached real image is served to the GET
+    }
+
+    @Test func undecodableImagesAreNotCachedSoALaterDecodableFetchStillWorks() async {
+        let recorder = Recorder()
+        let svg = Data("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"/>".utf8)
+        let png = decodablePNG()
+        let proxy = pipeline { _ in
+            recorder.record("fetch")
+            if recorder.all.count == 1 {
+                return UpstreamResponse(status: 200, headers: [HTTPHeader(name: "Content-Type", value: "image/svg+xml")],
+                                        body: svg, url: URL(string: "https://e.com/b.png")!)
+            }
+            return UpstreamResponse(status: 200, headers: [HTTPHeader(name: "Content-Type", value: "image/png")],
+                                    body: png, url: URL(string: "https://e.com/b.png")!)
+        }
+        let first = await proxy.respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/b.png"))
+        #expect(first.body == ImageTranscoder.placeholderGIF)
+        let second = await proxy.respond(to: ProxyRequest(method: "GET", host: "e.com", target: "/b.png"))
+        #expect(second.body != ImageTranscoder.placeholderGIF)
     }
 
     @Test func headResponsesKeepHeadersForSerialization() async {
