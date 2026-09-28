@@ -27,6 +27,30 @@ import Testing
         #expect(out.contains("charset=windows-1252"))
     }
 
+    @Test func resolvesALazyLoadedImageBeforeCleaning() throws {
+        let article = (0..<6).map { "<p>\($0) \(String(repeating: sentence, count: 3))</p>" }.joined()
+        let html = """
+        <html><head><title>A history</title></head><body>
+        <div class="post-content"><h2>Origins</h2>\(article)
+        <img data-src="/lazy.png" src="data:image/gif;base64,R0lGOD"></div>
+        </body></html>
+        """
+        let out = try #require(try ReaderExtractor.extract(html: html, pageURL: page))
+        #expect(out.contains("src=\"http://blog.example/lazy.png\""))
+    }
+
+    @Test func resolvesTheSmallestSrcsetCandidateBeforeCleaning() throws {
+        let article = (0..<6).map { "<p>\($0) \(String(repeating: sentence, count: 3))</p>" }.joined()
+        let html = """
+        <html><head><title>A history</title></head><body>
+        <div class="post-content"><h2>Origins</h2>\(article)
+        <img srcset="/s.png 100w, /l.png 900w"></div>
+        </body></html>
+        """
+        let out = try #require(try ReaderExtractor.extract(html: html, pageURL: page))
+        #expect(out.contains("src=\"http://blog.example/s.png\""))
+    }
+
     @Test func returnsNilWithoutARealArticle() throws {
         let html = "<html><body><a href=\"/a\">A</a> <a href=\"/b\">B</a><p>Short.</p></body></html>"
         #expect(try ReaderExtractor.extract(html: html, pageURL: page) == nil)

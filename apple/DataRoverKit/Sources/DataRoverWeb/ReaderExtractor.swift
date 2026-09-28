@@ -63,8 +63,13 @@ public enum ReaderExtractor {
                         + "<a href=\"\(HTMLCleaning.startPageURL)\">Start page</a></p><hr>")
         if !title.isEmpty { try body.append("<h1></h1>"); try body.children().last()?.text(title) }
         for element in kept { try body.append(try element.outerHtml()) }
-        try clean(body)
+        // fixImages must run before clean(): it resolves the real source
+        // from data-src/srcset into `src`, and clean() strips every img
+        // attribute except href/src/alt — running clean() first would
+        // strip data-src/srcset before fixImages ever saw them, leaving
+        // lazy-loaded images as bare <img> tags or data: placeholders.
         try HTMLCleaning.fixImages(in: output)
+        try clean(body)
         try HTMLCleaning.rewriteLinks(in: output, pageURL: pageURL)
         try HTMLCleaning.setCharset(output)
         return try HTMLCleaning.serialize(output)
